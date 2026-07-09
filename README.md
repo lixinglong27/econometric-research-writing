@@ -1,10 +1,8 @@
-# My Skills
+# Econometric Research Writing Skill
 
-Reusable `SKILL.md`-based agent skills for research and document-production workflows.
+Reusable `SKILL.md`-based agent skill for econometric analysis, economics/management empirical writing, citation integrity, and Word document production.
 
-## Included Skills
-
-### `econometric-research-writing`
+## Overview
 
 An end-to-end skill for professional economics and management empirical research. It supports:
 
@@ -40,8 +38,8 @@ The skill directory intentionally contains only files needed by a `SKILL.md`-com
 Clone the repository and copy the skill folder into the skill directory used by your agent runtime:
 
 ```bash
-git clone https://github.com/lixinglong27/my-skills.git
-cp -R my-skills/econometric-research-writing "$AGENT_SKILLS_DIR/econometric-research-writing"
+git clone https://github.com/lixinglong27/econometric-research-writing.git
+cp -R econometric-research-writing/econometric-research-writing "$AGENT_SKILLS_DIR/econometric-research-writing"
 ```
 
 Replace `AGENT_SKILLS_DIR` with the directory your runtime uses for local skills.
