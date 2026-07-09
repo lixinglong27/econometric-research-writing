@@ -80,13 +80,13 @@ python3 scripts/validate_repository.py --full
 
 The full validation compiles helper scripts, checks for local-path leaks, verifies the DOCX template structure, profiles a small panel dataset, generates a paper DOCX with an editable formula and three-line table, and inspects the result for citation/table/style issues.
 
-## Quality Rules
+## Responsible Use
 
-- Do not commit local absolute paths, personal usernames, temporary render outputs, or cache files.
-- Do not invent citations, papers, DOIs, datasets, or empirical evidence.
-- Keep the skill directory lean. Put human-facing repository documentation at the repository root.
-- Keep generated formulas editable as Office Math when formulas matter.
-- Use three-line tables by default for economics and management empirical outputs.
+- Treat the skill as a research and writing assistant, not a substitute for econometric judgment. Review model choices, identifying assumptions, and result interpretation before relying on outputs.
+- Verify data rights, privacy constraints, and institutional rules before using confidential or restricted datasets with any agent runtime.
+- Treat literature and citation outputs as source-backed only after verification. If a paper, DOI, dataset, or claim cannot be verified, do not cite it as fact.
+- Inspect generated Word documents before submission, especially formulas, table notes, source notes, citations, and figure placement.
+- For repository maintenance and contribution standards, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

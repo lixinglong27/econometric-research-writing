@@ -1,6 +1,6 @@
 # Contributing
 
-This repository contains reusable `SKILL.md`-based agent skills. Keep changes focused and easy to validate.
+This repository contains a reusable `SKILL.md`-based agent skill. Keep changes focused and easy to validate.
 
 ## Before Opening A Pull Request
 
