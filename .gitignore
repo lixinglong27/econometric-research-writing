@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+._*
+~$*
+.qa/
+*.tmp
+*.log
+profile.md
+profile.json
+verification.json
+references_clean.json
+paper.docx
+rendered/
