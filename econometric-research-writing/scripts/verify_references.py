@@ -1,6 +1,7 @@
 import argparse
 import difflib
 import json
+import os
 import re
 import sys
 import time
@@ -26,27 +27,27 @@ def title_similarity(a, b):
     return difflib.SequenceMatcher(None, a_norm, b_norm).ratio()
 
 
-def request_json(url, timeout=20):
+def request_json(url, timeout=20, mailto="unknown@example.com"):
     req = urllib.request.Request(
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "econometric-research-writing-skill/1.0 (mailto:unknown@example.com)",
+            "User-Agent": f"econometric-research-writing-skill/1.0 (mailto:{mailto})",
         },
     )
     with urllib.request.urlopen(req, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
-def crossref_by_doi(doi):
+def crossref_by_doi(doi, mailto="unknown@example.com"):
     url = f"{CROSSREF_WORKS}/{urllib.parse.quote(doi.strip())}"
-    return request_json(url).get("message", {})
+    return request_json(url, mailto=mailto).get("message", {})
 
 
-def crossref_by_title(title, rows=3):
+def crossref_by_title(title, rows=3, mailto="unknown@example.com"):
     params = urllib.parse.urlencode({"query.title": title, "rows": rows})
     url = f"{CROSSREF_WORKS}?{params}"
-    return request_json(url).get("message", {}).get("items", [])
+    return request_json(url, mailto=mailto).get("message", {}).get("items", [])
 
 
 def authors_from_crossref(item):
@@ -82,7 +83,7 @@ def summarize_crossref_item(item):
     }
 
 
-def verify_reference(ref, sleep_seconds=0.25):
+def verify_reference(ref, sleep_seconds=0.25, mailto="unknown@example.com"):
     title = ref.get("title", "")
     doi = ref.get("doi") or ref.get("DOI")
     result = {
@@ -95,7 +96,7 @@ def verify_reference(ref, sleep_seconds=0.25):
 
     try:
         if doi:
-            item = crossref_by_doi(doi)
+            item = crossref_by_doi(doi, mailto=mailto)
             matched = summarize_crossref_item(item)
             score = title_similarity(title, matched["title"]) if title else None
             result.update({"status": "verified_by_doi", "match_score": score, "matched": matched})
@@ -106,7 +107,7 @@ def verify_reference(ref, sleep_seconds=0.25):
             return result
 
         if title:
-            items = crossref_by_title(title, rows=3)
+            items = crossref_by_title(title, rows=3, mailto=mailto)
             candidates = [summarize_crossref_item(item) for item in items]
             scored = [(title_similarity(title, item["title"]), item) for item in candidates]
             scored.sort(key=lambda pair: pair[0], reverse=True)
@@ -189,10 +190,12 @@ def main():
     parser.add_argument("--out-md", help="Write a Markdown verification report.")
     parser.add_argument("--out-json", help="Write raw JSON verification results.")
     parser.add_argument("--out-enriched-json", help="Write normalized reference metadata for verified items.")
+    parser.add_argument("--mailto", help="Contact email to include in the Crossref API User-Agent for polite pool access.")
     args = parser.parse_args()
 
+    mailto = args.mailto or os.environ.get("CROSSREF_MAILTO") or "unknown@example.com"
     refs = load_references(args.references_json)
-    results = [verify_reference(ref) for ref in refs]
+    results = [verify_reference(ref, mailto=mailto) for ref in refs]
 
     if args.out_json:
         Path(args.out_json).write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
