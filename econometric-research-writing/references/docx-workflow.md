@@ -2,9 +2,9 @@
 
 This reference is a long-term skill resource for Word, OMML, rendering, and QA work for econometric research papers, course reports, and economics/management empirical documents.
 
-## macOS Formula Strategy
+## Formula Strategy
 
-Prior testing found that `word_mcp_live` could be installed but its live equation insertion tool was not implemented on macOS. Default to the fallback workflow:
+Generate or edit formulas as Word-native OMML/OOXML inside the `.docx` using the following workflow:
 
 1. Generate or edit formulas as Word-native OMML/OOXML inside the `.docx`.
 2. Preserve existing document structure, tables, figures, references, and styles.
@@ -33,7 +33,7 @@ After document edits:
 - For regression tables, summary-statistics tables, robustness tables, and method-comparison tables, keep notes below the table rather than adding extra boxed rows when possible.
 - For tables and figures, follow `tables-figures-style.md`: self-contained captions/legends, readable figure labels, source notes after other notes, and text callouts before or near each object.
 - Keep figure data colors when they carry meaning; only title/labels should be normalized if color is a formatting problem.
-- If numeric citations or note markers are required, use true Word superscript runs (`w:vertAlign w:val="superscript"`), not plain正文 markers such as `[1]`, `^1`, or Unicode superscript as the main representation.
+- If numeric citations or note markers are required, use true Word superscript runs (`w:vertAlign w:val="superscript"`), not plain text markers such as `[1]`, `^1`, or Unicode superscript as the main representation.
 - Confirm page count when prior versions had a known count, especially the 9-page versions.
 - Check no blank pages, clipped equations, overflowed tables, missing captions, or broken references.
 

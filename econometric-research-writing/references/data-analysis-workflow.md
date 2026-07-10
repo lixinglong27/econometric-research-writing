@@ -199,3 +199,10 @@ For Word paper deliverables, convert the final descriptive and regression tables
 - Running panel regressions without checking duplicate unit-time keys.
 - Running event studies without event-time support or pre-period observations.
 - Reporting many visuals but no model-ready conclusion.
+
+## See Also
+
+- [Method Selection](method-selection.md)
+- [Empirical Workflow](empirical-workflow.md)
+- [Tables and Figures Style](tables-figures-style.md)
+

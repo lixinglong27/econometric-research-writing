@@ -1,5 +1,6 @@
 numpy>=1.26
 pandas>=2.0
 python-docx>=1.1
-openpyxl>=3.1
-xlrd>=2.0
+openpyxl>=3.1  # Required by pandas for reading modern .xlsx Excel files
+xlrd>=2.0      # Required by pandas for reading legacy .xls Excel files
+

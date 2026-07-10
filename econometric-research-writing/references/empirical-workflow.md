@@ -86,3 +86,10 @@ For mechanism variables, state whether the estimate is a separate mechanism test
 - Result interpretation repeats statistical significance but never explains economic magnitude.
 - The paper claims causality while the design only supports association.
 - Generated Word/PDF outputs are not rendered and visually checked.
+
+## See Also
+
+- [Data Analysis Workflow](data-analysis-workflow.md)
+- [Method Selection](method-selection.md)
+- [Tables and Figures Style](tables-figures-style.md)
+

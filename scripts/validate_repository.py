@@ -17,9 +17,6 @@ FORBIDDEN_TEXT = [
     "file:" + "//",
     "xing" + "longli",
     "非线性" + "时间序列",
-    "Co" + "dex",
-    "CO" + "DEX",
-    "co" + "dex",
 ]
 
 

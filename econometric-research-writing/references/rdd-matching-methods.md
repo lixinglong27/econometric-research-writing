@@ -132,3 +132,10 @@ Interpretation:
 - Main estimand: ATE, ATT, local RDD effect, fuzzy RDD complier effect, or overlap-population effect.
 - Sensitivity to bandwidth, caliper, weights, trimming, and matching method.
 - Explicit statement that unobserved confounding remains a threat unless the design adds a credible source of exogenous variation.
+
+## See Also
+
+- [Method Selection](method-selection.md)
+- [Panel Methods](panel-methods.md)
+- [IV and Causal Methods](iv-causal-methods.md)
+

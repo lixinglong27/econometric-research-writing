@@ -90,7 +90,7 @@ def set_cell_border(cell, **kwargs):
             element = OxmlElement(tag)
             borders.append(element)
         for key, value in kwargs[edge].items():
-                element.set(qn("w:{}".format(key)), str(value))
+            element.set(qn("w:{}".format(key)), str(value))
 
 
 def force_style_color(style, color="000000"):

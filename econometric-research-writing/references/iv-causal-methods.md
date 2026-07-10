@@ -343,3 +343,11 @@ I construct the untreated counterfactual for [treated unit] using the pre-treatm
 - Use "treatment effect under parallel trends" for DiD/event studies.
 - Use "group-time ATT under staggered-adoption assumptions" for modern staggered DiD.
 - Use "gap relative to the constructed untreated counterfactual" for synthetic-counterfactual designs.
+
+## See Also
+
+- [Method Selection](method-selection.md)
+- [Panel Methods](panel-methods.md)
+- [RDD and Matching Methods](rdd-matching-methods.md)
+- [Time-Series Methods](time-series-methods.md)
+

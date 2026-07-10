@@ -516,3 +516,10 @@ Writing boundary:
 
 - Spatial correlation does not by itself establish spillover causality.
 - The definition of neighbors is part of the identifying argument and must be defensible.
+
+## See Also
+
+- [Method Selection](method-selection.md)
+- [IV and Causal Methods](iv-causal-methods.md)
+- [RDD and Matching Methods](rdd-matching-methods.md)
+

@@ -1,6 +1,6 @@
 ---
 name: econometric-research-writing
-description: End-to-end econometric analysis and economics/management paper-writing workflow. Use when the user asks to analyze datasets for empirical research, profile variables, audit data quality, map economic variable roles and causal pathways, design or run empirical analysis, choose econometric methods, handle static or dynamic panel models, IV/GMM, RDD, matching, IPW, modern staggered DiD, panel VAR, spatial panels, GARCH or Markov-switching time-series models, panel treatment effects or synthetic counterfactuals, search/verify academic literature, manage citation honesty, format references, write empirical strategy/results/robustness sections, polish econ or management academic prose, create publication-style Word DOCX reports with formulas/tables/figures, apply top-journal table/figure style, create Word superscript citation markers, validate OMML math, or finalize/clean econometric research documents.
+description: End-to-end econometric analysis and economics/management paper-writing workflow. Use for dataset profiling, model selection (panels, IV, GMM, DiD, time-series, volatility, regimes), literature/citation verification, academic prose polishing, and generating publication-style Word DOCX reports with native OMML equations and three-line tables.
 ---
 
 # Econometric Research Writing

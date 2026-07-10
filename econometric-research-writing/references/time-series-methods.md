@@ -378,3 +378,10 @@ Writing boundary:
 
 - Regimes are model-implied latent states, not directly observed categories.
 - Label regimes by estimated behavior, not by desired narrative.
+
+## See Also
+
+- [Method Selection](method-selection.md)
+- [Panel Methods](panel-methods.md)
+- [IV and Causal Methods](iv-causal-methods.md)
+

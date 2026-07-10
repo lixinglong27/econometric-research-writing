@@ -66,3 +66,12 @@ When recommending a method, provide:
 - A threshold or time-varying model with no bandwidth/threshold sensitivity.
 - A panel model that ignores cross-sectional dependence when units share macro shocks.
 - Tables of coefficients with no economic magnitude interpretation.
+
+## See Also
+
+- [Time-Series Methods](time-series-methods.md)
+- [Panel Methods](panel-methods.md)
+- [IV and Causal Methods](iv-causal-methods.md)
+- [RDD and Matching Methods](rdd-matching-methods.md)
+- [Data Analysis Workflow](data-analysis-workflow.md)
+

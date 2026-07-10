@@ -292,8 +292,10 @@ def markdown_report(report):
         lines.append("```")
     lines += ["", "## Column Profile"]
     for p in report["columns_profile"]:
-        base = f"- `{p['name']}` ({p['dtype']}): missing {p['missing']} ({p['missing_pct']:.1%}), unique {p['unique']}"
-        if "mean" in p:
+        pct_val = p.get("missing_pct")
+        pct_str = f"{pct_val:.1%}" if pct_val is not None else "0.0%"
+        base = f"- `{p['name']}` ({p['dtype']}): missing {p['missing']} ({pct_str}), unique {p['unique']}"
+        if "mean" in p and p["mean"] is not None:
             base += f", mean {p['mean']:.4g}, sd {p.get('std', float('nan')):.4g}, min {p.get('min'):.4g}, max {p.get('max'):.4g}"
         lines.append(base)
     lines += ["", "## Top Numeric Correlations"]

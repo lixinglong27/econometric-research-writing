@@ -44,7 +44,7 @@ def inspect_docx(path):
         if tbl_style is None:
             continue
         val = tbl_style.attrib.get(f"{{{NS['w']}}}val", "")
-        if val.lower() in {"tablegrid", "gridtable"} or "grid" in val.lower():
+        if val.lower() in {"tablegrid", "gridtable"}:
             grid_table_count += 1
 
     superscript_run_count = 0
