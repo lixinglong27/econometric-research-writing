@@ -77,8 +77,10 @@ def main():
 
     renderer = find_renderer()
     if renderer is None:
-        print("Warning: Visual QA skipped (could not find documents render_docx.py renderer).")
-        sys.exit(0)
+        raise SystemExit(
+            "Error: visual QA was not run because documents/render_docx.py could not be found. "
+            "Load the document-rendering dependency or set DOCX_RENDER_SCRIPT."
+        )
 
     cmd = [choose_python(), str(renderer), args.docx, "--output_dir", args.output_dir]
     if args.emit_pdf:

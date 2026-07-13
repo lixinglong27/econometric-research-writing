@@ -206,11 +206,16 @@ Methodology:
 
 - Inspect pairwise residual correlations after fitting the baseline model.
 - Use tests based on summed pairwise residual correlations when `N` panels may not be independent.
-- Add time effects, common factors, clustered inference, or factor-augmented models when dependence is material.
+- Cluster at the level of independent assignment or sampling. Unit clustering permits arbitrary heteroskedasticity and serial dependence within units but does not address common shocks across units.
+- Use two-way or multiway clustering when errors may co-move along more than one non-nested dimension, such as firm and calendar time. Require enough independent clusters in every dimension and inspect sparse intersection cells; a large observation count does not replace cluster count.
+- With few clusters, conventional cluster-robust asymptotics can over-reject. Report cluster counts and balance, and use a justified CR2/CR3-type correction, randomization inference, or wild-cluster bootstrap-t procedure. For the bootstrap, state whether the null is imposed, the weight distribution, repetitions, and the cluster level.
+- Add time effects or common factors when common shocks affect outcomes. Changing the covariance estimator alone does not repair slope inconsistency from omitted common factors correlated with regressors.
+- Use Driscoll–Kraay-type inference only when the time dimension is sufficiently long for its cross-sectional-and-serial-dependence asymptotics. Report kernel and bandwidth choices; do not present it as a remedy for short panels or latent-factor endogeneity.
 
 Report:
 
 - State whether common shocks are controlled.
+- Report clustering dimensions, cluster counts, finite-sample corrections, and why they match the assignment and dependence structure.
 - Avoid overconfident standard errors when cross-sectional dependence is plausible.
 
 ## Random Coefficient And Heterogeneous Slopes
@@ -280,8 +285,14 @@ Use when panel variables are persistent and may contain unit roots.
 Dynamic panel unit-root logic:
 
 ```text
-Delta Y_it = beta_i Delta Y_{i,t-1} + Delta epsilon_it
-Test whether beta_i = 1 or all beta_i are close to 1.
+Levels AR form:
+Y_it = mu_i + delta_i t + phi_i Y_{i,t-1} + epsilon_it
+H0: phi_i = 1
+
+Equivalent ADF form with optional augmenting lags:
+Delta Y_it = mu_i + delta_i t + rho_i Y_{i,t-1}
+             + sum_j gamma_ij Delta Y_{i,t-j} + epsilon_it
+rho_i = phi_i - 1; H0: rho_i = 0
 ```
 
 Panel cointegration:
@@ -294,7 +305,9 @@ Panel cointegration: Y_it - X_it' beta is stationary even if Y_it and X_it are n
 Methodology:
 
 - Estimate unit-specific persistence parameters when heterogeneity matters.
-- Use standardized statistics based on `(beta_hat_i - 1) / se(beta_hat_i)` and aggregate over units for large panels.
+- Match the null to the equation: test `phi_i=1` in the levels AR form or `rho_i=0` in the ADF form. Do not test a coefficient on `Delta Y_{i,t-1}` against one.
+- Choose deterministic terms and augmenting lags before testing, and use panel-test-specific nonstandard critical values or p-values rather than ordinary normal or t critical values.
+- State whether the panel test imposes a common persistence parameter or allows heterogeneous alternatives, and address cross-sectional dependence with an appropriate second-generation procedure when common factors are plausible.
 - Estimate fixed-effect cointegrating relations, then test residual persistence.
 
 Report:
@@ -522,4 +535,3 @@ Writing boundary:
 - [Method Selection](method-selection.md)
 - [IV and Causal Methods](iv-causal-methods.md)
 - [RDD and Matching Methods](rdd-matching-methods.md)
-

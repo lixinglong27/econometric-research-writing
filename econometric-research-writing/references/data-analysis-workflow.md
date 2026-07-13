@@ -53,7 +53,7 @@ Default rule: data analysis should produce a model-ready research map, not just 
 Rather than hardcoding specific database clients or APIs (like World Bank, FRED, or AkShare) into the writing skill, leverage the Model Context Protocol (MCP) or external fetching scripts as an abstract retrieval interface:
 
 - **Data Acquisition Boundary**: Use available data-fetching MCP tools or write temporary Python scripts to download macroeconomic, financial, or micro-level variables, saving them into a standard CSV, XLSX, or DTA dataset in the local workspace.
-- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` to run econometric profiling (stationarity, panel candidate checks, multicollinearity warnings, log transformation suggestions) and generate standard markdown reports.
+- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` for deterministic structure and quality profiling: column summaries, missingness, provisional role hints, panel candidate checks, high-correlation warnings, and log-transformation suggestions. The profiler does **not** run unit-root or stationarity tests; run those separately after confirming frequency, deterministic terms, lag structure, and relevant variables.
 
 ## Intake And Variable Semantics
 
@@ -205,4 +205,3 @@ For Word paper deliverables, convert the final descriptive and regression tables
 - [Method Selection](method-selection.md)
 - [Empirical Workflow](empirical-workflow.md)
 - [Tables and Figures Style](tables-figures-style.md)
-

@@ -38,7 +38,9 @@ def read_data(path, sheet=None):
     if suffix in {".csv", ".txt"}:
         return pd.read_csv(path)
     if suffix in {".xlsx", ".xls"}:
-        return pd.read_excel(path, sheet_name=sheet)
+        # ``sheet_name=None`` returns a dictionary of DataFrames. The profiler
+        # operates on one table, so default to the first worksheet.
+        return pd.read_excel(path, sheet_name=0 if sheet is None else sheet)
     if suffix == ".dta":
         return pd.read_stata(path)
     raise SystemExit(f"unsupported file type: {suffix}")
@@ -296,7 +298,13 @@ def markdown_report(report):
         pct_str = f"{pct_val:.1%}" if pct_val is not None else "0.0%"
         base = f"- `{p['name']}` ({p['dtype']}): missing {p['missing']} ({pct_str}), unique {p['unique']}"
         if "mean" in p and p["mean"] is not None:
-            base += f", mean {p['mean']:.4g}, sd {p.get('std', float('nan')):.4g}, min {p.get('min'):.4g}, max {p.get('max'):.4g}"
+            def fmt(value):
+                return "n/a" if value is None or pd.isna(value) else f"{value:.4g}"
+
+            base += (
+                f", mean {fmt(p.get('mean'))}, sd {fmt(p.get('std'))}, "
+                f"min {fmt(p.get('min'))}, max {fmt(p.get('max'))}"
+            )
         lines.append(base)
     lines += ["", "## Top Numeric Correlations"]
     for pair in report["top_correlations"] or [{"var1": "n/a", "var2": "n/a", "corr": "n/a"}]:

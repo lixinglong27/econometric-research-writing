@@ -9,15 +9,18 @@ Use RDD when treatment assignment changes discontinuously at a known cutoff in a
 Sharp RDD:
 
 ```text
-Y_i = alpha + tau D_i + f(R_i - c) + epsilon_i
 D_i = I(R_i >= c)
+Y_i = alpha + tau D_i
+    + beta_- (R_i - c)(1-D_i) + beta_+ (R_i - c)D_i + epsilon_i
 ```
+
+Equivalently, use separate local functions on the two sides of the cutoff. The interaction or side-specific functions are essential: imposing a common slope through the cutoff can turn curvature into a false discontinuity.
 
 Fuzzy RDD:
 
 ```text
-First stage: D_i = pi_0 + pi_1 Z_i + f(R_i - c) + v_i
-Reduced form: Y_i = gamma_0 + gamma_1 Z_i + f(R_i - c) + u_i
+First stage: D_i = pi_0 + pi_1 Z_i + g_-(R_i-c)(1-Z_i) + g_+(R_i-c)Z_i + v_i
+Reduced form: Y_i = gamma_0 + gamma_1 Z_i + f_-(R_i-c)(1-Z_i) + f_+(R_i-c)Z_i + u_i
 Wald estimand: tau_FRD = gamma_1 / pi_1
 ```
 
@@ -138,4 +141,3 @@ Interpretation:
 - [Method Selection](method-selection.md)
 - [Panel Methods](panel-methods.md)
 - [IV and Causal Methods](iv-causal-methods.md)
-

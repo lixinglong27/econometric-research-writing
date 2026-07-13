@@ -61,6 +61,7 @@ def check_required_layout():
         SKILL_DIR / "scripts" / "profile_econ_dataset.py",
         SKILL_DIR / "scripts" / "render_validate_docx.py",
         SKILL_DIR / "scripts" / "verify_references.py",
+        SKILL_DIR / "tests" / "test_regressions.py",
     ]
     for path in required:
         if not path.exists():
@@ -238,6 +239,18 @@ def run_full_smoke_tests():
             fail("DOCX smoke test did not create a source note")
         if report["plain_numeric_citation_markers_preview"]:
             fail("DOCX smoke test found non-superscript numeric citation markers")
+
+        run_command(
+            [
+                sys.executable,
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                str(SKILL_DIR / "tests"),
+                "-v",
+            ]
+        )
 
 
 def main():

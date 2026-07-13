@@ -63,12 +63,16 @@ Methodology:
 - Estimate the second stage using fitted endogenous variation.
 - Cluster standard errors at the treatment, assignment, or sampling level when dependence is plausible.
 - Use overidentification checks only as partial diagnostics; they do not prove exclusion.
+- Match the strength diagnostic to the covariance assumptions. A conventional first-stage F and Stock–Yogo critical values belong to the homoskedastic Cragg–Donald setting; under heteroskedasticity or clustering, report a robust Kleibergen–Paap-type statistic or an appropriate effective-F diagnostic.
+- For multiple endogenous regressors, report conditional first-stage diagnostics such as Sanderson–Windmeijer statistics rather than one omnibus F alone.
+- When identification may be weak, report Anderson–Rubin or conditional likelihood-ratio confidence sets/tests where supported and use LIML or Fuller-type estimates as sensitivity checks. Do not apply a universal `F > 10` rule mechanically.
 
 Report:
 
 - State why OLS is likely biased.
 - State the instrument, relevance channel, and exclusion restriction in words.
 - Report first-stage coefficient and F-statistic or equivalent weak-instrument diagnostic.
+- Report partial first-stage fit, excluded-instrument and endogenous-regressor counts, and the weak-identification-robust procedure used when conventional 2SLS inference is unreliable.
 - Interpret IV as local to the variation induced by the instrument when appropriate.
 
 ## Dynamic Panel IV
@@ -115,6 +119,10 @@ Methodology:
 - Check whether the instrument timing is valid under the assumed error process.
 - Compare alternative lag depths and instrument sets.
 - For Arellano-Bond-style GMM, stack all available moment conditions of the form `E[W_i' Delta u_i] = 0`, choose a weighting matrix, and keep instrument count controlled relative to `N`.
+- Difference GMM uses lagged levels as instruments for transformed equations. System GMM additionally stacks level equations instrumented by lagged differences and therefore requires extra initial-condition or mean-stationarity restrictions; state and defend those restrictions rather than treating system GMM as automatically preferable.
+- Report AR(1) and AR(2) tests in differenced residuals. First-order correlation is commonly induced by differencing, whereas second-order correlation threatens the usual lagged-level instruments.
+- Report one-step robust inference and, when reporting two-step GMM, finite-sample-corrected two-step standard errors such as the Windmeijer correction. Uncorrected two-step standard errors are often downward biased in finite samples.
+- Limit instrument proliferation with prespecified lag windows, collapsed instruments, or both. Report instrument count relative to the number of units and sensitivity to a smaller instrument set; a high Hansen p-value with many instruments is not reassuring by itself.
 - For forward orthogonal deviations, transform each observation by subtracting the average of future observations; this can be useful in unbalanced panels and preserves orthogonality under the same underlying timing assumptions.
 - For likelihood or QMLE dynamic panels, explicitly model the initial condition or use a conditional-mean approximation; otherwise likelihood estimates can be driven by unmodeled initial conditions.
 
@@ -124,6 +132,7 @@ Report:
 - Explain relevance and exclusion/exogeneity.
 - Report serial-correlation diagnostics in differenced residuals and whether lagged instruments remain valid.
 - Report instrument count, lag windows, and any instrument-collapsing rule when using GMM.
+- Report the transformation, one-step/two-step weighting choice, Windmeijer or other finite-sample covariance correction, AR(1)/AR(2), Hansen/Sargan diagnostics, and difference-in-Hansen tests for additional system-GMM moment subsets when relevant.
 - Avoid saying IV "solves endogeneity"; write "under the maintained instrument validity assumptions."
 
 ## Exogenous Covariates In Dynamic Panels
@@ -350,4 +359,3 @@ I construct the untreated counterfactual for [treated unit] using the pre-treatm
 - [Panel Methods](panel-methods.md)
 - [RDD and Matching Methods](rdd-matching-methods.md)
 - [Time-Series Methods](time-series-methods.md)
-
