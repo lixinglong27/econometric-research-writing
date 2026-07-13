@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/econometric-research-writing/analysis-spec.schema.json",
+  "title": "Econometric analysis specification",
+  "description": "Versioned contract for the bundled Python econometric execution layer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec_version", "analysis_id", "data", "model"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "spec_version": { "const": "1.0" },
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"
+    },
+    "backend": {
+      "enum": ["auto", "python"],
+      "default": "auto"
+    },
+    "data": { "$ref": "#/$defs/data" },
+    "model": { "$ref": "#/$defs/model" },
+    "output": { "$ref": "#/$defs/output" }
+  },
+  "$defs": {
+    "variable": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,31}$"
+    },
+    "variables": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/variable" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "format": {
+          "enum": ["csv", "tsv", "xlsx", "parquet", "feather"]
+        },
+        "encoding": { "type": "string", "default": "utf-8" },
+        "sheet": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "integer", "minimum": 0 }
+          ]
+        }
+      }
+    },
+    "covariance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["homoskedastic", "hc1", "cluster"],
+          "default": "hc1"
+        },
+        "cluster": { "$ref": "#/$defs/variable" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "cluster" } }
+          },
+          "then": { "required": ["cluster"] },
+          "else": { "not": { "required": ["cluster"] } }
+        }
+      ]
+    },
+    "did": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["design", "unit", "time", "treatment"],
+      "properties": {
+        "design": { "const": "classic" },
+        "method": { "const": "twfe" },
+        "unit": { "$ref": "#/$defs/variable" },
+        "time": { "$ref": "#/$defs/variable" },
+        "treatment": { "$ref": "#/$defs/variable" }
+      }
+    },
+    "rdd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["running", "cutoff", "bandwidth"],
+      "properties": {
+        "design": { "const": "sharp", "default": "sharp" },
+        "running": { "$ref": "#/$defs/variable" },
+        "cutoff": { "type": "number" },
+        "bandwidth": { "type": "number", "exclusiveMinimum": 0 },
+        "polynomial_order": { "enum": [1, 2], "default": 1 },
+        "kernel": {
+          "enum": ["triangular", "uniform"],
+          "default": "triangular"
+        }
+      }
+    },
+    "time_series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time", "lags"],
+      "properties": {
+        "time": { "$ref": "#/$defs/variable" },
+        "lags": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "include_trend": { "type": "boolean", "default": false }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "outcome"],
+      "properties": {
+        "type": {
+          "enum": ["ols", "fe", "twfe", "did", "iv_2sls", "rdd", "ar"]
+        },
+        "outcome": { "$ref": "#/$defs/variable" },
+        "regressors": { "$ref": "#/$defs/variables" },
+        "controls": { "$ref": "#/$defs/variables" },
+        "fixed_effects": { "$ref": "#/$defs/variables" },
+        "endogenous": { "$ref": "#/$defs/variables" },
+        "instruments": { "$ref": "#/$defs/variables" },
+        "add_intercept": { "type": "boolean" },
+        "weights": { "$ref": "#/$defs/variable" },
+        "covariance": { "$ref": "#/$defs/covariance" },
+        "did": { "$ref": "#/$defs/did" },
+        "rdd": { "$ref": "#/$defs/rdd" },
+        "time_series": { "$ref": "#/$defs/time_series" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "not": { "const": "did" } } } },
+          "then": { "not": { "required": ["did"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "rdd" } } } },
+          "then": { "not": { "required": ["rdd"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "ar" } } } },
+          "then": { "not": { "required": ["time_series"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "iv_2sls" } } } },
+          "then": {
+            "properties": {
+              "endogenous": { "maxItems": 0 },
+              "instruments": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": { "not": { "enum": ["fe", "twfe", "iv_2sls"] } }
+            }
+          },
+          "then": { "properties": { "fixed_effects": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "ols" } } },
+          "then": {
+            "anyOf": [
+              { "properties": { "regressors": { "minItems": 1 } }, "required": ["regressors"] },
+              { "properties": { "controls": { "minItems": 1 } }, "required": ["controls"] }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "fe" } } },
+          "then": {
+            "required": ["fixed_effects"],
+            "properties": { "fixed_effects": { "minItems": 1 } },
+            "allOf": [
+              { "not": { "required": ["weights"] } },
+              {
+                "anyOf": [
+                  { "properties": { "regressors": { "minItems": 1 } }, "required": ["regressors"] },
+                  { "properties": { "controls": { "minItems": 1 } }, "required": ["controls"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "twfe" } } },
+          "then": {
+            "required": ["fixed_effects"],
+            "properties": { "fixed_effects": { "minItems": 2 } },
+            "allOf": [
+              { "not": { "required": ["weights"] } },
+              {
+                "anyOf": [
+                  { "properties": { "regressors": { "minItems": 1 } }, "required": ["regressors"] },
+                  { "properties": { "controls": { "minItems": 1 } }, "required": ["controls"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "did" } } },
+          "then": {
+            "required": ["did"],
+            "not": { "required": ["weights"] }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "iv_2sls" } } },
+          "then": {
+            "required": ["endogenous", "instruments"],
+            "not": { "required": ["weights"] },
+            "properties": {
+              "endogenous": { "minItems": 1 },
+              "instruments": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "rdd" } } },
+          "then": {
+            "required": ["rdd"],
+            "not": { "required": ["weights"] }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "ar" } } },
+          "then": {
+            "required": ["time_series"],
+            "not": { "required": ["weights"] },
+            "properties": {
+              "covariance": {
+                "properties": {
+                  "type": { "enum": ["homoskedastic", "hc1"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "directory": { "type": "string", "minLength": 1 },
+        "overwrite": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

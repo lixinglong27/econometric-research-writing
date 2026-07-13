@@ -1,387 +1,193 @@
 # Time-Series Methods
 
-Use this long-term reference when the task involves a single aggregate series, multiple interacting time series, nonstationarity, thresholds, nonlinear dynamics, time-varying coefficients, or forecasting. Pair it with `method-selection.md` for model choice and `empirical-workflow.md` for execution and reporting.
+Use this core reference for linear autoregressions, unit roots, cointegration, ECM/VECM, Granger predictive tests, VARs, and local projections. Use [Nonlinear And Volatility Time-Series Methods](time-series-nonlinear-volatility-methods.md) for thresholds/breaks, kernel regression, time-varying coefficients, dynamic bootstrap, ARCH/GARCH, Markov switching, or flexible nonlinear prediction.
 
 ## Table Of Contents
 
 - Linear AR Estimation
-- Unit Root And Nonstationarity
-- Threshold And Structural Change
-- Kernel And Nonparametric Regression
+- Unit Roots And Nonstationarity
 - Cointegration
+- Error-Correction Models And VECM
 - Granger Predictive Causality
 - VAR Models
-- Time-Varying VAR And Coefficients
-- Dynamic Wild Bootstrap
-- Semiparametric And Localized Neural Networks
+- Local Projections
 - Method-Matched Robustness
 - Claim Boundaries
+- See Also
 
 ## Linear AR Estimation
 
-Use for a stationary single series, forecasting baseline, or benchmark before threshold, nonlinear, VAR, or nonstationary extensions.
-
-Core equations:
+Use a stationary AR model as a forecasting baseline or a compact description of serial dependence.
 
 ```text
-AR(1): X_t = phi_1 X_{t-1} + Z_t
-AR(p): X_t - phi_1 X_{t-1} - ... - phi_p X_{t-p} = Z_t
+AR(p): X_t = c + phi_1 X_{t-1} + ... + phi_p X_{t-p} + Z_t
 ```
 
-Methodology:
+Estimation distinctions:
 
-- Estimate AR coefficients by OLS, minimizing sample squared one-step prediction errors.
-- For AR(1), use the lagged cross-product over lagged squares estimator.
-- Estimate innovation variance from the residual sum of squares.
-- For AR(p), use Yule-Walker equations by multiplying the AR equation by lagged values and solving autocovariance moments.
-- Use maximum likelihood when a full innovation distribution is imposed; under independent Gaussian innovations, simple AR ML coincides with OLS for coefficients.
+- OLS minimizes one-step prediction errors conditional on the first `p` observations. With Gaussian innovations, it equals conditional Gaussian ML for the regression parameters.
+- Exact Gaussian ML includes the joint stationary density of the initial observations. It generally differs from conditional ML/OLS in finite samples, although the estimators are asymptotically close under regularity conditions.
+- Yule–Walker estimates solve sample-autocovariance moment equations. They are neither the generic OLS estimator nor exact ML.
+- If the model includes an intercept, trend, seasonality, or exogenous regressors, carry those terms consistently through estimation and forecasting.
 
-Report:
+Workflow:
 
-- State the stationarity assumption.
-- Report order selection, residual diagnostics, and innovation variance.
-- Do not use a linear AR model as the final method when the research question is about regimes, parameter instability, or nonstationarity.
+1. Choose lag order using information criteria, substantive timing, and residual diagnostics.
+2. Check stationarity through roots of the AR characteristic polynomial.
+3. Inspect residual autocorrelation, conditional heteroskedasticity, and stability.
+4. Evaluate genuine out-of-sample forecasts when prediction is the objective.
 
-## Unit Root And Nonstationarity
+Report the estimator as conditional OLS/ML, exact ML, or Yule–Walker rather than saying only “maximum likelihood.”
 
-Use before estimating models in levels when persistence, stochastic trends, or macro/financial variables are plausible.
+For a reproducible dependency-light conditional AR(p) baseline, the bundled
+Python execution contract supports `model.type="ar"` with an explicit
+time variable and lag order. It checks regular spacing and reports companion-root
+stability. Use a dedicated backend/package for ARIMA, seasonal, or state-space
+models rather than presenting this baseline as those estimators.
 
-DF/ADF logic:
+## Unit Roots And Nonstationarity
+
+DF/ADF reparameterization:
 
 ```text
 y_t = rho y_{t-1} + u_t
-Delta y_t = gamma y_{t-1} + u_t, gamma = rho - 1
-H0: gamma = 0  (unit root / nonstationary)
-H1: gamma < 0  (stationary)
+Delta y_t = gamma y_{t-1} + u_t, where gamma = rho - 1
+H0: gamma = 0  (unit root)
+H1: gamma < 0  (stationary around included deterministic terms)
 ```
 
-Methodology:
+ADF adds lagged differences to whiten the error. Include no constant, a constant, or a constant plus trend according to the data-generating story; post hoc choice of deterministic terms changes the test.
 
-- Estimate the differenced regression by OLS.
-- Use the t-statistic for `gamma`, recognizing that the null distribution is non-standard.
-- Add lagged differences for ADF when residual serial correlation is likely.
-- Use PP tests for non-i.i.d. errors and KPSS as a complementary stationarity-null test.
-- Include no deterministic term, intercept, or intercept plus trend according to the data-generating story.
+Key rules:
 
-Report:
+- DF/ADF statistics have nonstandard null distributions. Use the critical values/p-values for the chosen deterministic specification.
+- PP modifies inference for serial correlation/heteroskedasticity; KPSS reverses the null to level or trend stationarity. These tests are complementary, not a mechanical voting rule.
+- Unit-root tests can have low power near unity, while breaks can mimic persistence. Report uncertainty and use break-robust tests when the historical setting suggests a break.
+- Determine integration order before cointegration or ARDL bounds work; an `I(2)` variable invalidates standard `I(0)/I(1)` bounds critical values.
+- Seasonal unit roots require seasonal procedures rather than an ordinary ADF test alone.
 
-- Report the deterministic specification.
-- Distinguish trend stationarity from difference stationarity.
-- Phrase non-rejection carefully: "evidence consistent with nonstationarity," not proof of a unit root.
-
-## Threshold And Structural Change
-
-Use when dynamics or covariate effects differ across regimes, thresholds, or structural break periods.
-
-Core model:
-
-```text
-y_t = x_t' beta_1 I[z_t in A] + x_t' beta_2 I[z_t in B] + e_t
-B = A^c
-```
-
-Common cases:
-
-- `x_t = y_{t-1}` and `z_t = y_{t-1}` for threshold autoregression.
-- External `z_t` for economically defined regimes.
-- `z_t = t` for structural change or time split.
-
-Methodology:
-
-- For a fixed threshold, estimate regime coefficients by OLS inside each regime.
-- If the threshold is unknown, search candidate thresholds and minimize residual sum of squares.
-- Use trimming rules to avoid very small regimes.
-- For threshold AR, use differenced forms when discussing persistence or unit-root behavior.
-
-Report:
-
-- Define the threshold variable and economic interpretation of regimes.
-- Report search range, trimming rule, and regime sizes.
-- Treat threshold evidence as conditional dynamics, not causal identification.
-
-## Kernel And Nonparametric Regression
-
-Use when a parametric conditional mean, variance, or density is too restrictive and sample size supports local estimation.
-
-Density and conditional density:
-
-```text
-f_hat(y, x) = average product kernels in y and x
-f_hat(y | x) = f_hat(y, x) / f_hat(x)
-```
-
-Conditional mean and variance:
-
-```text
-m_hat(x) = sum K((x_t - x)/b) y_t / sum K((x_t - x)/b)
-sigma_hat^2(x) = weighted residual variance around m_hat(x)
-```
-
-Methodology:
-
-- Choose kernel and bandwidth.
-- Estimate local means, variances, or densities through kernel-weighted averages.
-- For smooth time trends, set `x_t = t` or `tau_t = t/T`.
-- Always run bandwidth sensitivity because the shape can depend on smoothing.
-
-Report:
-
-- State kernel, bandwidth, and effective local sample size.
-- Discuss boundary behavior.
-- Use plots and confidence bands when the estimated function is central.
+Write “fail to reject the unit-root null” rather than “prove nonstationarity.” Distinguish stochastic-trend, deterministic-trend, and covariance-stationary processes.
 
 ## Cointegration
 
-Use when multiple series appear nonstationary but may share a stable long-run relation.
+Use cointegration methods when individually nonstationary series may share stationary long-run combinations.
 
-Residual-based workflow:
+Engle–Granger residual approach:
 
 ```text
-c_t = alpha + beta i_t + u_t
-or after detrending:
-u_t = c_t^* - alpha - beta i_t^*
+y_t = a + beta' x_t + u_t
+Cointegration: u_t is I(0) while y_t and x_t are I(1)
 ```
 
-Methodology:
+Workflow:
 
-- Motivate or test nonstationarity in individual series.
-- Estimate the long-run relation by OLS.
-- Test residuals for stationarity using residual unit-root checks.
-- If residuals are stationary while variables are nonstationary, interpret the result as evidence of a long-run equilibrium relation.
+1. Establish plausible integration orders and deterministic terms.
+2. Estimate the long-run relation and test the fitted residual for a unit root.
+3. Use Engle–Granger/residual-based cointegration critical values, not ordinary DF/ADF critical values, because the residual is generated by an estimated first-stage relation.
+4. Check breaks, normalization, lag choice, and residual behavior.
 
-Report:
+Engle–Granger is most natural for one cointegrating relation and can depend on the normalized dependent variable in finite samples. Dynamic OLS or fully modified OLS can reduce long-run-regression bias from endogeneity and serial correlation, but they do not supply causal identification.
 
-- Separate individual series unit-root evidence from residual stationarity evidence.
-- Do not treat cointegration alone as structural causality.
+Johansen system approach:
+
+```text
+Delta Y_t = Pi Y_{t-1} + sum_{j=1}^{p-1} Gamma_j Delta Y_{t-j}
+          + deterministic terms + epsilon_t
+Pi = alpha beta'
+rank(Pi) = r
+```
+
+- Use trace and maximum-eigenvalue tests to determine the cointegration rank `r` in a VAR system.
+- Critical values depend on where constants/trends enter the system. Select VAR lag order and deterministic terms before interpreting rank tests.
+- If `0 < r < K`, columns of `beta` span the cointegrating space and `alpha` gives adjustment loadings. If `r=0`, model nonstationary variables in differences absent another long-run restriction; if `r=K`, the levels vector is stationary.
+- Small samples, near-unit roots, breaks, and residual nonnormality can distort rank inference; use appropriate corrections or bootstrap procedures when supported.
+
+ARDL bounds testing can handle a mixture of `I(0)` and `I(1)` regressors in a conditional single-equation setting, but not `I(2)` variables. Use case-specific lower/upper critical bounds and address inconclusive statistics rather than treating them as rejection.
+
+## Error-Correction Models And VECM
+
+For one cointegrating relation, a single-equation ECM may be written:
+
+```text
+Delta y_t = lambda (y_{t-1} - beta' x_{t-1})
+          + short-run dynamics + epsilon_t
+```
+
+The sign and magnitude of `lambda` describe adjustment only under the chosen normalization and stability conditions. A conditional ECM also requires appropriate weak-exogeneity assumptions for regressors if long-run parameters are interpreted from one equation.
+
+With multiple endogenous series and rank `r`, estimate the VECM system. Report:
+
+- Cointegration rank and deterministic specification.
+- Normalization or identifying restrictions on `beta`.
+- Adjustment loadings `alpha` and short-run lag dynamics.
+- Residual diagnostics and parameter/break stability.
+- Weak-exogeneity restrictions if used.
+
+Do not fit an unrestricted levels VAR, differenced VAR, and VECM interchangeably: each encodes different long-run restrictions.
 
 ## Granger Predictive Causality
 
-Use for predictive precedence, not structural causality.
-
-Core comparison:
-
 ```text
-Restricted AR: y_t = rho_0 + rho_1 y_{t-1} + ... + rho_p y_{t-p} + e_t
-Augmented AR:  add gamma_1 x_{t-1} + ... + gamma_q x_{t-q}
+Restricted: y_t = a + sum_{j=1}^p rho_j y_{t-j} + e_t
+Augmented:  y_t = a + sum_{j=1}^p rho_j y_{t-j}
+                  + sum_{j=1}^q gamma_j x_{t-j} + e_t
+H0: gamma_1 = ... = gamma_q = 0
 ```
 
-Methodology:
+Choose lags before testing, preserve cointegration through a VECM or another valid representation, and test both directions when feedback is plausible. A Toda–Yamamoto augmented-VAR procedure can protect Wald testing against uncertain integration/cointegration orders under its own lag-order and maximum-integration-order conditions.
 
-- Fit the restricted autoregression for `y_t`.
-- Fit the augmented model with lagged `x_t`.
-- Test whether lagged `x_t` coefficients jointly add predictive information.
-- If feedback is plausible, test both directions.
-
-Report:
-
-- Say "`x` Granger-causes `y`" only in the predictive sense.
-- Report lag choices and joint significance tests.
+Granger causality means incremental predictive content conditional on the included information set. It is not structural causality and can change when relevant variables, sampling frequency, or breaks change.
 
 ## VAR Models
 
-Use for multiple endogenous time series that interact dynamically.
-
-Core model:
-
 ```text
 Y_t = nu + A_1 Y_{t-1} + ... + A_p Y_{t-p} + epsilon_t
-epsilon_t is vector white noise with covariance Sigma_epsilon
+Var(epsilon_t) = Sigma
 ```
 
-Methodology:
+Workflow:
 
-- Specify lag order `p`.
-- Estimate by multivariate least squares or equation-by-equation OLS.
-- Check stability using roots of `det(I_K - A_1 z - ... - A_p z^p) = 0`; stability requires roots outside the unit circle.
-- For stable VARs, use the infinite MA representation for propagation and forecasting.
-- Select lag order using residual diagnostics, residual ACF, Ljung-Box tests, and information criteria.
+1. Define the endogenous vector and transformations.
+2. Choose lag order using information criteria, residual diagnostics, and substantive timing.
+3. Check stability through companion-matrix roots; a stable VAR has roots inside the unit circle under the companion-eigenvalue convention (equivalently, roots of the lag polynomial lie outside it).
+4. Inspect residual autocorrelation, heteroskedasticity, and parameter stability.
+5. Report forecasts, forecast-error variance decompositions, or impulse responses with uncertainty.
 
-Report:
+Reduced-form innovations are correlated surprises, not automatically economic shocks. Causal impulse responses require explicit contemporaneous/long-run restrictions, external instruments, sign restrictions, or another structural design. If variables are cointegrated, preserve the implied error-correction restrictions unless a justified alternative is used.
 
-- Report variables, lag order, stability, and residual diagnostics.
-- Emphasize forecasting and dynamic dependence unless structural restrictions are justified.
-- Avoid treating reduced-form VAR coefficients as structural mechanisms.
+## Local Projections
 
-## Time-Varying VAR And Coefficients
-
-Use when coefficients evolve smoothly over time.
-
-Univariate time-varying regression:
+Use local projections for horizon-specific responses without iterating a full VAR:
 
 ```text
-y_t = X_{t-1}' beta_t + e_t
+Y_{t+h} = alpha_h + beta_h Shock_t + Gamma_h' Controls_t + u_{t+h}
 ```
 
-TV-VAR:
+Estimate one equation per horizon; replace the level outcome with a change or cumulative change when that is the target. Include lags and deterministic terms justified by the design, and use inference robust to serial correlation induced by overlapping horizons. Smooth or shrink horizon profiles only with transparent assumptions.
 
-```text
-y_t = a(tau_t) + sum_{j=1}^p A_j(tau_t) y_{t-j} + eta_t
-tau_t = t/T
-```
-
-Local constant TV-VAR estimator:
-
-```text
-vec[A_hat(tau)] =
-[sum Z_{s-1} Z_{s-1}' K_h(tau_s - tau)]^{-1}
- sum Z_{t-1} y_t K_h(tau_t - tau)
-```
-
-Methodology:
-
-- Rewrite the model as local regression in normalized time `tau`.
-- Estimate coefficient matrices with kernel weights at each time point.
-- Estimate local innovation covariance from weighted residuals.
-- Test coefficient constancy with restrictions such as `C beta(tau) = c`.
-- Use integrated weighted squared deviation statistics for constancy tests.
-- Use simulation-assisted or dynamic wild bootstrap inference when finite-sample inference is fragile.
-
-Report:
-
-- Plot coefficient paths with uncertainty bands.
-- Report bandwidth and lag choices.
-- Interpret paths as evolving associations or transmission patterns unless a structural design is added.
-
-## Dynamic Wild Bootstrap
-
-Use when nonparametric smoothing and time dependence make analytic inference unreliable.
-
-Methodology:
-
-- Estimate the smooth mean or coefficient function, often with an over-smoothing bandwidth.
-- Obtain residuals.
-- Generate bootstrap residuals by multiplying residuals by a dependent wild process with mean zero, unit variance, and serial dependence controlled by a kernel/tuning parameter.
-- Re-estimate the smooth function on bootstrap samples.
-- Use bootstrap quantiles for confidence intervals or test statistics.
-
-Report:
-
-- State bootstrap repetitions, bandwidths, and dependence tuning.
-- Present bootstrap intervals as finite-sample support, not exact proof.
-
-## Semiparametric And Localized Neural Networks
-
-Use for flexible nonlinear response surfaces or high-dimensional predictors when a report needs more than a parametric regression.
-
-Partially linear model:
-
-```text
-y = alpha z + g(x) + epsilon
-z = I(m(x) - eta >= 0)
-```
-
-Residualized estimator:
-
-```text
-y_t - g1_hat(x_t) approx (z_t - g2_hat(x_t)) alpha + epsilon_t
-alpha_hat = [sum z_tilde^2]^{-1} sum z_tilde y_tilde
-```
-
-Localized neural network:
-
-```text
-y_t = g(x_t) + epsilon_t
-```
-
-Methodology:
-
-- Estimate nuisance functions `E[y|x]` and `E[z|x]`.
-- Residualize `y` and `z`, then estimate the low-dimensional parameter by OLS on residuals.
-- For localized neural networks, partition the covariate domain into local cubes and approximate `g(x)` with local shallow-network components.
-- Use out-of-sample performance, RMSE, coverage, or simulation evidence for validation.
-
-Report:
-
-- Emphasize nonlinear prediction or flexible association.
-- Do not claim causal identification without separate identifying restrictions.
+Report the complete prespecified horizon path with pointwise or simultaneous bands. Multiple horizon-by-horizon tests create a multiplicity problem; do not highlight only significant horizons. A local-projection coefficient is a causal impulse response only when `Shock_t` is structurally identified.
 
 ## Method-Matched Robustness
 
-- AR: residual whiteness, lag order, alternative estimators.
-- Unit root: ADF/PP/KPSS and deterministic-specification sensitivity.
-- ARCH/GARCH: ARCH effects, standardized residual diagnostics, distributional assumptions, volatility forecast performance, and alternative volatility specifications.
-- Markov switching: number of regimes, transition probability stability, regime classification uncertainty, and robustness to starting values.
-- Threshold: threshold range, trimming, regime sizes, alternative threshold variables.
-- Kernel/nonparametric: bandwidth and kernel sensitivity.
-- Cointegration: residual stationarity and break sensitivity.
-- Granger: lag order and reverse-direction tests.
-- VAR: stability roots, residual ACF/Ljung-Box, information criteria, forecast performance.
-- TV-VAR/time-varying coefficients: bandwidth, constancy tests, bootstrap confidence bands, out-of-sample comparison.
-- Semiparametric/neural methods: nuisance fit, sample splitting where relevant, out-of-sample validation, bootstrap inference.
+- AR: lag order, stationarity roots, conditional versus exact likelihood, residual whiteness, stability, and out-of-sample forecasts.
+- Unit roots: deterministic terms, lag choice, ADF/PP/KPSS triangulation, break/seasonal sensitivity, and integration order.
+- Cointegration: residual-specific critical values, Johansen rank/deterministic terms, normalization, breaks, and DOLS/FMOLS or system sensitivity.
+- ECM/VECM: rank, adjustment stability, weak exogeneity, residual diagnostics, and parameter constancy.
+- Granger: lag order, reverse direction, information set, and integration-aware representation.
+- VAR: lag order, stability convention, residual checks, cointegration restrictions, and structural-identification sensitivity.
+- Local projections: controls/lags, overlapping-horizon inference, horizon choice, simultaneous bands, and alternative shock definitions.
 
 ## Claim Boundaries
 
-- Granger causality means predictive content, not structural causality.
-- Cointegration indicates a stable long-run relation, not a causal mechanism.
-- Reduced-form VAR dynamics are endogenous interactions unless structural restrictions are imposed.
-- Nonparametric and time-varying models show flexible heterogeneity or evolving associations by default.
-
-## ARCH And GARCH Volatility Models
-
-Use when volatility clustering, risk dynamics, or conditional variance forecasting is central, especially for financial returns, exchange rates, inflation uncertainty, or commodity prices.
-
-ARCH(q):
-
-```text
-r_t = mu + epsilon_t
-epsilon_t = sigma_t z_t
-sigma_t^2 = omega + sum_{i=1}^q alpha_i epsilon_{t-i}^2
-```
-
-GARCH(1,1):
-
-```text
-sigma_t^2 = omega + alpha epsilon_{t-1}^2 + beta sigma_{t-1}^2
-```
-
-Extensions:
-
-- EGARCH or GJR-GARCH for asymmetric volatility responses.
-- GARCH-in-mean when risk affects expected returns.
-- Multivariate GARCH only when covariance dynamics are central and the sample supports the parameter count.
-
-Workflow:
-
-1. Model or remove mean dynamics first.
-2. Test residual ARCH effects.
-3. Estimate conditional variance model with an appropriate innovation distribution.
-4. Check standardized residual autocorrelation and remaining ARCH effects.
-5. Report persistence `alpha + beta` and volatility half-life when meaningful.
-6. Evaluate out-of-sample volatility forecasts if forecasting is a goal.
-
-Writing boundary:
-
-- GARCH explains conditional variance, not necessarily the conditional mean.
-- Do not use volatility persistence as evidence of a causal mechanism without an identification design.
-
-## Markov-Switching Models
-
-Use when regimes are latent and the data may switch probabilistically between states such as expansion/recession, high/low volatility, or tight/loose policy.
-
-Two-regime mean model:
-
-```text
-y_t = mu_{s_t} + phi_{s_t} y_{t-1} + epsilon_t
-s_t in {1, 2}
-Pr(s_t = j | s_{t-1} = i) = p_ij
-```
-
-Workflow:
-
-1. Define which parameters switch: intercept, variance, autoregressive slope, or transition probabilities.
-2. Estimate with maximum likelihood or filtering/smoothing routines.
-3. Report transition probabilities and expected regime durations.
-4. Plot smoothed regime probabilities against economically meaningful events.
-5. Test whether additional regimes are justified by fit and interpretability.
-
-Writing boundary:
-
-- Regimes are model-implied latent states, not directly observed categories.
-- Label regimes by estimated behavior, not by desired narrative.
+- Failing to reject a unit root or cointegration rank is not proof of the null.
+- Cointegration and error correction describe long-run comovement and adjustment, not a causal mechanism.
+- Granger causality is predictive precedence conditional on an information set.
+- Reduced-form VAR and unidentified local-projection responses are dynamic associations.
+- Structural shock interpretation requires restrictions defended outside the time-series fit itself.
 
 ## See Also
 
 - [Method Selection](method-selection.md)
+- [Nonlinear And Volatility Time-Series Methods](time-series-nonlinear-volatility-methods.md)
 - [Panel Methods](panel-methods.md)
-- [IV and Causal Methods](iv-causal-methods.md)
-
+- [IV And Causal Methods](iv-causal-methods.md)

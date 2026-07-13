@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -13,10 +14,15 @@ from pathlib import Path
 CROSSREF_WORKS = "https://api.crossref.org/works"
 
 
-def normalize_title(value):
-    value = (value or "").lower()
-    value = re.sub(r"[^a-z0-9]+", " ", value)
+def normalize_text(value):
+    """Normalize Unicode text without discarding non-Latin scripts."""
+    value = unicodedata.normalize("NFKC", str(value or "")).casefold()
+    value = "".join(char if char.isalnum() else " " for char in value)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def normalize_title(value):
+    return normalize_text(value)
 
 
 def title_similarity(a, b):
@@ -25,6 +31,90 @@ def title_similarity(a, b):
     if not a_norm or not b_norm:
         return 0.0
     return difflib.SequenceMatcher(None, a_norm, b_norm).ratio()
+
+
+def author_family_names(value):
+    """Return normalized family-name candidates from common author formats."""
+    if not value:
+        return set()
+    if isinstance(value, (str, dict)):
+        value = [value]
+    families = set()
+    for author in value:
+        if isinstance(author, dict):
+            name = author.get("family") or author.get("name") or ""
+        else:
+            name = str(author)
+        normalized = normalize_text(name)
+        if not normalized:
+            continue
+        # Crossref returns family names separately. For free-form input, the
+        # final token is the least surprising comparison key.
+        families.add(normalized.split()[-1])
+    return families
+
+
+def author_similarity(input_authors, matched_authors):
+    left = author_family_names(input_authors)
+    right = author_family_names(matched_authors)
+    if not left or not right:
+        return None
+    return len(left & right) / len(left | right)
+
+
+def normalized_year(value):
+    match = re.search(r"\d{4}", str(value or ""))
+    return int(match.group(0)) if match else None
+
+
+def metadata_match(ref, matched):
+    """Score a candidate across every supplied identity field."""
+    title_score = title_similarity(ref.get("title"), matched.get("title"))
+    input_authors = ref.get("authors") or ref.get("author")
+    authors_score = author_similarity(input_authors, matched.get("authors"))
+    input_year = normalized_year(ref.get("year"))
+    matched_year = normalized_year(matched.get("year"))
+    year_score = None if input_year is None or matched_year is None else float(input_year == matched_year)
+    input_container = ref.get("container_title") or ref.get("journal") or ref.get("venue")
+    matched_container = matched.get("container_title")
+    container_score = (
+        title_similarity(input_container, matched_container)
+        if input_container and matched_container
+        else None
+    )
+
+    field_scores = {
+        "title": title_score,
+        "authors": authors_score,
+        "year": year_score,
+        "container_title": container_score,
+    }
+    weights = {"title": 0.65, "authors": 0.20, "year": 0.10, "container_title": 0.05}
+    available = [(weights[name], score) for name, score in field_scores.items() if score is not None]
+    composite = sum(weight * score for weight, score in available) / sum(weight for weight, _ in available)
+
+    corroborating_matches = []
+    if authors_score is not None and authors_score > 0:
+        corroborating_matches.append("authors")
+    if year_score == 1.0:
+        corroborating_matches.append("year")
+    if container_score is not None and container_score >= 0.75:
+        corroborating_matches.append("container_title")
+
+    mismatches = []
+    if ref.get("title") and title_score < 0.80:
+        mismatches.append("title")
+    if authors_score is not None and authors_score == 0:
+        mismatches.append("authors")
+    if year_score == 0.0:
+        mismatches.append("year")
+
+    return {
+        "composite": composite,
+        "field_scores": field_scores,
+        "corroborating_matches": corroborating_matches,
+        "mismatches": mismatches,
+    }
 
 
 def request_json(url, timeout=20, mailto="unknown@example.com"):
@@ -90,6 +180,7 @@ def verify_reference(ref, sleep_seconds=0.25, mailto="unknown@example.com"):
         "input": ref,
         "status": "not_checked",
         "match_score": None,
+        "field_scores": None,
         "matched": None,
         "warning": None,
     }
@@ -98,23 +189,58 @@ def verify_reference(ref, sleep_seconds=0.25, mailto="unknown@example.com"):
         if doi:
             item = crossref_by_doi(doi, mailto=mailto)
             matched = summarize_crossref_item(item)
-            score = title_similarity(title, matched["title"]) if title else None
-            result.update({"status": "verified_by_doi", "match_score": score, "matched": matched})
-            if title and score is not None and score < 0.80:
+            details = metadata_match(ref, matched)
+            result.update({
+                "status": "verified_by_doi",
+                "match_score": details["composite"],
+                "field_scores": details["field_scores"],
+                "matched": matched,
+            })
+            if details["mismatches"]:
                 result["status"] = "metadata_mismatch"
-                result["warning"] = "DOI resolved, but title similarity is below 0.80."
+                result["warning"] = (
+                    "DOI resolved, but supplied metadata disagrees on: "
+                    + ", ".join(details["mismatches"])
+                    + "."
+                )
             time.sleep(sleep_seconds)
             return result
 
         if title:
-            items = crossref_by_title(title, rows=3, mailto=mailto)
+            items = crossref_by_title(title, rows=5, mailto=mailto)
             candidates = [summarize_crossref_item(item) for item in items]
-            scored = [(title_similarity(title, item["title"]), item) for item in candidates]
-            scored.sort(key=lambda pair: pair[0], reverse=True)
-            if scored and scored[0][0] >= 0.85:
-                result.update({"status": "verified_by_title", "match_score": scored[0][0], "matched": scored[0][1]})
+            scored = [(metadata_match(ref, item), item) for item in candidates]
+            scored.sort(
+                key=lambda pair: (pair[0]["composite"], pair[0]["field_scores"]["title"]),
+                reverse=True,
+            )
+            if scored:
+                details, matched = scored[0]
+                title_score = details["field_scores"]["title"]
+                result.update({
+                    "match_score": details["composite"],
+                    "field_scores": details["field_scores"],
+                    "matched": matched,
+                })
+                if details["mismatches"]:
+                    result["status"] = "metadata_mismatch"
+                    result["warning"] = (
+                        "Best Crossref candidate disagrees on: "
+                        + ", ".join(details["mismatches"])
+                        + "."
+                    )
+                elif title_score >= 0.90 and details["corroborating_matches"]:
+                    result["status"] = "verified_by_metadata"
+                elif title_score >= 0.85:
+                    result["status"] = "candidate_match"
+                    result["warning"] = (
+                        "Title match found, but no supplied author/year/venue field independently corroborates it."
+                    )
+                else:
+                    result["status"] = "needs_manual_review"
+                    result["warning"] = "No high-confidence Crossref metadata match found."
             else:
-                result.update({"status": "needs_manual_review", "match_score": scored[0][0] if scored else 0.0})
+                result.update({"status": "needs_manual_review", "match_score": 0.0})
                 result["warning"] = "No high-confidence Crossref title match found."
             time.sleep(sleep_seconds)
             return result
@@ -164,7 +290,7 @@ def enriched_reference(result):
     ref = dict(result.get("input", {}))
     matched = result.get("matched") or {}
     status = result.get("status")
-    if matched and status in {"verified_by_doi", "verified_by_title"}:
+    if matched and status in {"verified_by_doi", "verified_by_metadata"}:
         return {
             "title": matched.get("title") or ref.get("title"),
             "authors": matched.get("authors") or ref.get("authors", []),
@@ -175,10 +301,12 @@ def enriched_reference(result):
             "type": matched.get("type") or ref.get("type"),
             "verification_status": status,
             "match_score": result.get("match_score"),
+            "field_scores": result.get("field_scores"),
         }
 
     ref["verification_status"] = status
     ref["match_score"] = result.get("match_score")
+    ref["field_scores"] = result.get("field_scores")
     if result.get("warning"):
         ref["warning"] = result["warning"]
     return ref
@@ -207,7 +335,13 @@ def main():
     if not args.out_json and not args.out_md and not args.out_enriched_json:
         print(json.dumps(results, indent=2, ensure_ascii=False))
 
-    bad_statuses = {"metadata_mismatch", "needs_manual_review", "insufficient_metadata", "verification_error"}
+    bad_statuses = {
+        "candidate_match",
+        "metadata_mismatch",
+        "needs_manual_review",
+        "insufficient_metadata",
+        "verification_error",
+    }
     if any(item.get("status") in bad_statuses for item in results):
         sys.exit(1)
 

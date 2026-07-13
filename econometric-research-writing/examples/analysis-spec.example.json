@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/analysis-spec.schema.json",
+  "spec_version": "1.0",
+  "analysis_id": "training_worker_fe",
+  "backend": "auto",
+  "data": {
+    "path": "data/training_panel.csv",
+    "format": "csv",
+    "encoding": "utf-8"
+  },
+  "model": {
+    "type": "fe",
+    "outcome": "log_wage",
+    "regressors": ["training_hours"],
+    "controls": ["experience"],
+    "fixed_effects": ["worker_id"],
+    "covariance": {
+      "type": "cluster",
+      "cluster": "worker_id"
+    }
+  },
+  "output": {
+    "directory": "outputs/training_worker_fe",
+    "overwrite": false
+  }
+}

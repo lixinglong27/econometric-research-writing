@@ -6,6 +6,7 @@ Use this long-term reference when the user provides a dataset, variable list, co
 
 - What Generic Data Analysis Skills Do Well
 - Econometric Upgrade
+- Data Acquisition and Decoupling
 - Intake And Variable Semantics
 - Data Structure Audit
 - Data Quality And Measurement
@@ -15,6 +16,7 @@ Use this long-term reference when the user provides a dataset, variable list, co
 - Model-Ready Dataset Checks
 - Output Contract
 - Failure Modes
+- See Also
 
 ## What Generic Data Analysis Skills Do Well
 
@@ -53,7 +55,7 @@ Default rule: data analysis should produce a model-ready research map, not just 
 Rather than hardcoding specific database clients or APIs (like World Bank, FRED, or AkShare) into the writing skill, leverage the Model Context Protocol (MCP) or external fetching scripts as an abstract retrieval interface:
 
 - **Data Acquisition Boundary**: Use available data-fetching MCP tools or write temporary Python scripts to download macroeconomic, financial, or micro-level variables, saving them into a standard CSV, XLSX, or DTA dataset in the local workspace.
-- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` to run econometric profiling (stationarity, panel candidate checks, multicollinearity warnings, log transformation suggestions) and generate standard markdown reports.
+- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` for deterministic structure and quality profiling: column summaries, missingness, provisional name-based role hints, complete unit-time-grid checks, high-correlation warnings, and log-transformation suggestions. The profiler does **not** run unit-root or stationarity tests; run those separately after frequency, deterministic terms, lag structure, and relevant variables are confirmed.
 
 ## Intake And Variable Semantics
 
@@ -67,7 +69,12 @@ Before modeling, build a variable dictionary with:
 - Economic role: outcome, main regressor, control, mechanism, moderator, instrument, fixed effect, clustering unit, weight, or sample flag.
 - Measurement risk: survey error, accounting definition change, currency/inflation issue, coding change, top-coding, censoring, selection.
 
-If names are ambiguous, ask targeted questions or infer cautiously and label the inference as provisional.
+Treat every role inferred from a column name as provisional. Name-based hints may suggest questions, but they do not establish that a variable is an outcome, treatment, mechanism, instrument, or valid control. Confirm substantive roles with the user, codebook, or research design before drawing causal arrows or specifying a model. Unit/time hints may be used provisionally for duplicate-key and grid checks, provided that status is visible in the report.
+
+The dataset profiler labels high correlation as a multicollinearity warning only
+for variables explicitly declared together as `treatment`/`regressor(s)` and
+`control(s)`. Outcome-regressor association remains visible in the correlation
+table but is not itself called multicollinearity.
 
 ## Data Structure Audit
 
@@ -205,4 +212,3 @@ For Word paper deliverables, convert the final descriptive and regression tables
 - [Method Selection](method-selection.md)
 - [Empirical Workflow](empirical-workflow.md)
 - [Tables and Figures Style](tables-figures-style.md)
-

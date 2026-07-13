@@ -18,6 +18,13 @@ FORBIDDEN_TEXT = [
     "xing" + "longli",
     "非线性" + "时间序列",
 ]
+FORBIDDEN_EXECUTION_TOKENS = [
+    "Python" + "/R",
+    "R" + "/Stata",
+    "analysis." + "R",
+    "analysis." + "do",
+    "read_" + "stata",
+]
 
 
 def fail(message):
@@ -55,12 +62,18 @@ def check_required_layout():
         SKILL_DIR / "references" / "tables-figures-style.md",
         SKILL_DIR / "references" / "literature-citation-workflow.md",
         SKILL_DIR / "references" / "docx-workflow.md",
+        SKILL_DIR / "references" / "python-execution.md",
+        SKILL_DIR / "schemas" / "analysis-spec.schema.json",
+        SKILL_DIR / "examples" / "analysis-spec.example.json",
         SKILL_DIR / "scripts" / "build_paper_docx.py",
         SKILL_DIR / "scripts" / "check_docx_integrity.py",
         SKILL_DIR / "scripts" / "omml_math.py",
         SKILL_DIR / "scripts" / "profile_econ_dataset.py",
         SKILL_DIR / "scripts" / "render_validate_docx.py",
         SKILL_DIR / "scripts" / "verify_references.py",
+        SKILL_DIR / "scripts" / "run_econometric_analysis.py",
+        SKILL_DIR / "scripts" / "econometric_execution" / "runner.py",
+        SKILL_DIR / "tests" / "test_execution_layer.py",
     ]
     for path in required:
         if not path.exists():
@@ -111,6 +124,9 @@ def check_no_forbidden_text():
         for token in FORBIDDEN_TEXT:
             if token in text:
                 fail(f"forbidden text {token!r} in {path.relative_to(ROOT)}")
+        for token in FORBIDDEN_EXECUTION_TOKENS:
+            if token in text:
+                fail(f"removed execution token {token!r} in {path.relative_to(ROOT)}")
 
 
 def check_docx_template():
@@ -125,7 +141,7 @@ def check_docx_template():
 
 
 def check_python_compile():
-    for path in sorted((SKILL_DIR / "scripts").glob("*.py")):
+    for path in sorted((SKILL_DIR / "scripts").rglob("*.py")):
         py_compile.compile(str(path), doraise=True)
 
 
@@ -238,6 +254,18 @@ def run_full_smoke_tests():
             fail("DOCX smoke test did not create a source note")
         if report["plain_numeric_citation_markers_preview"]:
             fail("DOCX smoke test found non-superscript numeric citation markers")
+
+    run_command(
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            str(SKILL_DIR / "tests"),
+            "-v",
+        ]
+    )
 
 
 def main():

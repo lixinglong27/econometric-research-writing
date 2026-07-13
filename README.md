@@ -7,6 +7,7 @@ Reusable `SKILL.md`-based agent skill for econometric analysis, economics/manage
 An end-to-end skill for professional economics and management empirical research. It supports:
 
 - Econometric dataset profiling and model-readiness checks.
+- Executable Python analysis contracts for OLS, fixed effects, classic DiD, IV/2SLS, sharp RDD, and conditional AR models.
 - Variable role inference, economic meaning checks, mechanism-path mapping, and causal-language boundaries.
 - Method selection for panel, time-series, causal inference, RDD, matching, IPW, staggered DiD, GARCH, Markov-switching, panel VAR, and spatial panel designs.
 - Literature search, citation provenance, and reference-integrity workflows with a strict no-fabrication rule.
@@ -23,8 +24,11 @@ An end-to-end skill for professional economics and management empirical research
 │   │   └── openai.yaml
 │   ├── assets/
 │   │   └── econ-paper-template.docx
+│   ├── examples/
 │   ├── references/
-│   └── scripts/
+│   ├── schemas/
+│   ├── scripts/
+│   └── tests/
 ├── scripts/
 │   └── validate_repository.py
 ├── requirements.txt
@@ -59,6 +63,7 @@ python3 econometric-research-writing/scripts/profile_econ_dataset.py data.csv --
 python3 econometric-research-writing/scripts/build_paper_docx.py paper.json paper.docx --template econometric-research-writing/assets/econ-paper-template.docx
 python3 econometric-research-writing/scripts/check_docx_integrity.py paper.docx
 python3 econometric-research-writing/scripts/verify_references.py references.json --out-json verification.json --out-enriched-json references_clean.json
+python3 econometric-research-writing/scripts/run_econometric_analysis.py analysis.json --backend python --output-dir results/baseline
 ```
 
 DOCX rendering is optional and depends on an external document renderer. The skill supports renderer discovery through generic document-rendering environment variables documented in `econometric-research-writing/references/docx-workflow.md`.
@@ -78,7 +83,7 @@ python3 -m pip install -r requirements.txt
 python3 scripts/validate_repository.py --full
 ```
 
-The full validation compiles helper scripts, checks for local-path leaks, verifies the DOCX template structure, profiles a small panel dataset, generates a paper DOCX with an editable formula and three-line table, and inspects the result for citation/table/style issues.
+The full validation compiles all helper modules, runs the bundled regression tests, checks for local-path leaks, verifies the DOCX template structure, profiles a small panel dataset, generates a paper DOCX with an editable formula and three-line table, and inspects the result for citation/table/style issues.
 
 ## Responsible Use
 

@@ -38,9 +38,9 @@ def read_data(path, sheet=None):
     if suffix in {".csv", ".txt"}:
         return pd.read_csv(path)
     if suffix in {".xlsx", ".xls"}:
-        return pd.read_excel(path, sheet_name=sheet)
-    if suffix == ".dta":
-        return pd.read_stata(path)
+        # pandas returns a ``dict[str, DataFrame]`` when ``sheet_name=None``.
+        # The profiler operates on one DataFrame, so default to the first sheet.
+        return pd.read_excel(path, sheet_name=0 if sheet is None else sheet)
     raise SystemExit(f"unsupported file type: {suffix}")
 
 
@@ -74,14 +74,20 @@ def first_inferred_role(inferred, role, columns):
 
 
 def roles_with_inferred_panel_keys(roles, inferred, columns):
+    """Return declared roles plus provisional structural keys.
+
+    Column-name hints are not substantive research semantics. Only unit and time
+    hints may be used for automatic structural checks; treatment, outcome,
+    mechanism, instrument, and weight hints remain provisional until declared.
+    """
     merged = dict(roles)
     sources = {k: "declared" for k in merged}
-    for role in ["unit", "time", "treatment", "outcome", "mechanism", "instrument", "weight"]:
+    for role in ["unit", "time"]:
         if role not in merged:
             value = first_inferred_role(inferred, role, columns)
             if value is not None:
                 merged[role] = value
-                sources[role] = "inferred"
+                sources[role] = "provisional_name_hint"
     return merged, sources
 
 
@@ -139,18 +145,37 @@ def panel_checks(df, roles):
     if not unit or not time or unit not in df.columns or time not in df.columns:
         return None
     key = df[[unit, time]]
-    duplicate_count = int(key.duplicated().sum())
-    counts = df.groupby(unit, dropna=False)[time].nunique(dropna=True)
+    complete_keys = key.dropna()
+    duplicate_count = int(complete_keys.duplicated().sum())
+    missing_key_rows = int(key.isna().any(axis=1).sum())
+    counts = complete_keys.groupby(unit, dropna=False)[time].nunique(dropna=True)
+    n_units = int(complete_keys[unit].nunique(dropna=True))
+    n_periods = int(complete_keys[time].nunique(dropna=True))
+    observed_grid_cells = int(complete_keys.drop_duplicates().shape[0])
+    expected_grid_cells = n_units * n_periods
+    complete_unit_time_grid = bool(
+        n_units
+        and n_periods
+        and duplicate_count == 0
+        and missing_key_rows == 0
+        and observed_grid_cells == expected_grid_cells
+    )
     return {
         "unit": unit,
         "time": time,
-        "n_units": int(df[unit].nunique(dropna=True)),
-        "n_periods": int(df[time].nunique(dropna=True)),
+        "n_units": n_units,
+        "n_periods": n_periods,
         "duplicate_unit_time_rows": duplicate_count,
+        "missing_unit_or_time_rows": missing_key_rows,
+        "observed_grid_cells": observed_grid_cells,
+        "expected_grid_cells": expected_grid_cells,
         "min_periods_per_unit": int(counts.min()) if len(counts) else 0,
         "median_periods_per_unit": safe_float(counts.median()) if len(counts) else None,
         "max_periods_per_unit": int(counts.max()) if len(counts) else 0,
-        "balanced_candidate": bool(len(counts) and counts.min() == counts.max()),
+        # Keep the legacy key for downstream consumers, but make it a true
+        # rectangular-grid check rather than an equal-row-count heuristic.
+        "balanced_candidate": complete_unit_time_grid,
+        "complete_unit_time_grid": complete_unit_time_grid,
     }
 
 
@@ -159,6 +184,17 @@ def load_roles(path):
         return {}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     return {k: v for k, v in data.items() if v}
+
+
+def declared_regressor_names(roles, columns):
+    """Return only variables explicitly declared to enter the same right-hand side."""
+
+    names = []
+    for role in ("treatment", "regressor", "regressors", "control", "controls"):
+        value = roles.get(role)
+        values = value if isinstance(value, list) else [value] if isinstance(value, str) else []
+        names.extend(name for name in values if name in columns)
+    return list(dict.fromkeys(names))
 
 
 def warnings(df, profiles, roles):
@@ -183,8 +219,11 @@ def warnings(df, profiles, roles):
                 except Exception:
                     pass
 
-    # Check for multicollinearity (correlation > 0.8) among numeric variables
-    num_cols = df.select_dtypes(include=[np.number]).columns
+    # Correlation is a multicollinearity concern only when both variables are
+    # explicitly declared to enter the same right-hand side. Outcome/regressor
+    # association is expected and remains visible in the correlations table.
+    declared = declared_regressor_names(roles, df.columns)
+    num_cols = [name for name in declared if pd.api.types.is_numeric_dtype(df[name])]
     if len(num_cols) >= 2:
         try:
             corr_matrix = df[num_cols].corr().abs()
@@ -193,7 +232,7 @@ def warnings(df, profiles, roles):
                 for col2 in cols_list[i+1:]:
                     r_val = corr_matrix.loc[col1, col2]
                     if pd.notna(r_val) and r_val > 0.8:
-                        out.append(f"High correlation between `{col1}` and `{col2}` (r = {r_val:.2f}); potential multicollinearity risk if both are used as regressors.")
+                        out.append(f"High correlation between declared regressors `{col1}` and `{col2}` (r = {r_val:.2f}); assess multicollinearity in the specified model.")
         except Exception:
             pass
 
@@ -214,7 +253,10 @@ def build_report(path, df, roles):
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
         "roles": roles,
-        "analysis_roles": {str(k): str(v) for k, v in analysis_roles.items()},
+        "analysis_roles": {
+            str(k): list(v) if isinstance(v, list) else str(v)
+            for k, v in analysis_roles.items()
+        },
         "role_sources": role_sources,
         "inferred_role_hints": {str(k): v for k, v in inferred.items()},
         "columns_profile": profiles,
@@ -226,6 +268,10 @@ def build_report(path, df, roles):
 
 
 def markdown_report(report):
+    def role_value(value):
+        values = value if isinstance(value, list) else [value]
+        return ", ".join(f"`{item}`" for item in values)
+
     lines = [
         "# Econometric Dataset Profile",
         "",
@@ -237,15 +283,20 @@ def markdown_report(report):
     ]
     if report["roles"]:
         for k, v in report["roles"].items():
-            lines.append(f"- {k}: `{v}`")
+            lines.append(f"- {k}: {role_value(v)}")
     else:
         lines.append("- None supplied. Treat role hints below as provisional.")
     if report["analysis_roles"]:
         lines += ["", "## Analysis Roles Used For Automatic Checks"]
         for k, v in report["analysis_roles"].items():
             source = report["role_sources"].get(k, "unknown")
-            lines.append(f"- {k}: `{v}` ({source})")
-    lines += ["", "## Inferred Role Hints"]
+            lines.append(f"- {k}: {role_value(v)} ({source})")
+    lines += [
+        "",
+        "## Provisional Name-Based Role Hints",
+        "",
+        "These hints are candidates for review, not validated causal or measurement roles.",
+    ]
     for col, hints in report["inferred_role_hints"].items():
         lines.append(f"- `{col}`: {', '.join(hints)}")
     if not report["inferred_role_hints"]:
@@ -263,40 +314,24 @@ def markdown_report(report):
             f"- Units: {p['n_units']}",
             f"- Periods: {p['n_periods']}",
             f"- Duplicate unit-time rows: {p['duplicate_unit_time_rows']}",
+            f"- Rows missing unit or time: {p['missing_unit_or_time_rows']}",
+            f"- Observed/expected unit-time cells: {p['observed_grid_cells']}/{p['expected_grid_cells']}",
             f"- Periods per unit: min {p['min_periods_per_unit']}, median {p['median_periods_per_unit']}, max {p['max_periods_per_unit']}",
-            f"- Balanced candidate: {p['balanced_candidate']}",
+            f"- Complete rectangular unit-time grid: {p['complete_unit_time_grid']}",
         ]
-    treatment = report["analysis_roles"].get("treatment")
-    outcome = report["analysis_roles"].get("outcome")
-    if treatment and outcome:
-        lines += [
-            "",
-            "## Inferred Causal Pathway Map",
-            "",
-            "```mermaid",
-            "graph LR",
-            f'    T["Treatment: {treatment}"] --> Y["Outcome: {outcome}"]',
-        ]
-        mechanism = report["analysis_roles"].get("mechanism")
-        if mechanism:
-            lines += [
-                f'    M["Mechanism: {mechanism}"]',
-                "    T --> M --> Y",
-            ]
-        instrument = report["analysis_roles"].get("instrument")
-        if instrument:
-            lines += [
-                f'    Z["Instrument: {instrument}"]',
-                "    Z --> T",
-            ]
-        lines.append("```")
     lines += ["", "## Column Profile"]
     for p in report["columns_profile"]:
         pct_val = p.get("missing_pct")
         pct_str = f"{pct_val:.1%}" if pct_val is not None else "0.0%"
         base = f"- `{p['name']}` ({p['dtype']}): missing {p['missing']} ({pct_str}), unique {p['unique']}"
         if "mean" in p and p["mean"] is not None:
-            base += f", mean {p['mean']:.4g}, sd {p.get('std', float('nan')):.4g}, min {p.get('min'):.4g}, max {p.get('max'):.4g}"
+            def fmt(value):
+                return "n/a" if value is None or pd.isna(value) else f"{value:.4g}"
+
+            base += (
+                f", mean {fmt(p.get('mean'))}, sd {fmt(p.get('std'))}, "
+                f"min {fmt(p.get('min'))}, max {fmt(p.get('max'))}"
+            )
         lines.append(base)
     lines += ["", "## Top Numeric Correlations"]
     for pair in report["top_correlations"] or [{"var1": "n/a", "var2": "n/a", "corr": "n/a"}]:
@@ -318,7 +353,13 @@ def main():
     parser = argparse.ArgumentParser(description="Profile a CSV/XLSX/DTA dataset for econometric research planning.")
     parser.add_argument("data_file")
     parser.add_argument("--sheet")
-    parser.add_argument("--roles-json", help="JSON such as {'unit':'firm_id','time':'year','outcome':'y','treatment':'policy'}.")
+    parser.add_argument(
+        "--roles-json",
+        help=(
+            "JSON such as {'unit':'firm_id','time':'year','outcome':'y',"
+            "'treatment':'policy','controls':['size','age']}."
+        ),
+    )
     parser.add_argument("--out", required=True, help="Markdown report path.")
     parser.add_argument("--json-out", help="Optional JSON report path.")
     args = parser.parse_args()

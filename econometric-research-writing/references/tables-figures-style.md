@@ -2,6 +2,17 @@
 
 Use this reference when producing or revising tables, regression output, descriptive statistics, robustness tables, coefficient plots, event-study figures, trend plots, mechanism diagrams, or Word/PDF-ready visual material for economics, finance, management, or applied econometrics papers.
 
+## Table Of Contents
+
+- Style Basis
+- Table Rules
+- Empirical Table Types
+- Figure Rules
+- Econometric Figure Types
+- Placement And Callouts
+- Table/Figure Prose
+- QA Checklist
+
 ## Style Basis
 
 Default to an economics/management top-journal style inspired by AEA/JEL, QJE, Journal of Finance, Review of Financial Studies, and Academy of Management conventions:
@@ -23,12 +34,14 @@ Use these defaults unless the user provides a journal template:
 - Keep tables in portrait orientation when possible.
 - Keep empirical tables narrow: no more than 8-9 columns including row labels unless a landscape appendix table is justified.
 - Use `Panel A`, `Panel B`, etc. for sections inside a table.
+- For grouped or multirow column headers, declare the number of header rows explicitly. The middle rule belongs below the final header row; do not place it between a spanning group label and its subordinate column labels.
 - Do not abbreviate column headings unless the abbreviation is standard and defined in the note.
 - Place a leading zero before decimals: `0.357`, not `.357`.
 - Put standard errors in parentheses below coefficients, or t-statistics if the project explicitly uses them.
 - Do not add significance stars by default. If the user or course requires stars, define the thresholds in the note.
 - Put sample size, fixed effects, controls, clustering, and standard-error type in visible rows.
 - Put `Notes:` and `Source:` below the table, outside the table grid.
+- Keep ordinary variable identifiers as text. Mark a table cell as math explicitly when Word-native OMML is intended; underscores, carets, or Greek-letter words alone are not reliable evidence that an entire label is a formula.
 - Define every non-obvious variable, transformation, panel, sample restriction, and estimation convention in the note or variable-definition appendix.
 - Place source notes after other notes.
 - Include full citations for data or reused table content in the references.
@@ -159,6 +172,7 @@ Avoid:
 Before final delivery:
 
 - Tables use three-line style unless explicitly overridden.
+- Multirow headers place the header-bottom rule below the complete header block.
 - No vertical borders, shading, or full grid tables in empirical outputs.
 - Notes define variables, standard errors, clustering, sample restrictions, and sources.
 - Figures have axis labels, units, captions, readable text, and uncertainty intervals where needed.

@@ -1,85 +1,146 @@
 ---
 name: econometric-research-writing
-description: End-to-end econometric analysis and economics/management paper-writing workflow. Use for dataset profiling, model selection (panels, IV, GMM, DiD, time-series, volatility, regimes), literature/citation verification, academic prose polishing, and generating publication-style Word DOCX reports with native OMML equations and three-line tables.
+description: End-to-end econometric research with executable Python workflows, dataset profiling, identification and model selection (panels, IV/GMM, DiD/RDD, time series, volatility, regimes), inference diagnostics, reproducible result contracts, citation verification, and economics/management DOCX reporting with native OMML equations and three-line tables. Use when econometric design or estimation must carry through to interpretation or manuscript writing; prefer dedicated skills for pure literature lookup, generic prose polishing, generic charting, or Word-only formatting.
 ---
 
 # Econometric Research Writing
 
 ## Overview
 
-Use this skill to turn a research question, dataset, assignment, draft, result table, or literature need into a rigorous econometric analysis and a standard economics/management paper-style Word document. The skill combines method selection, empirical workflow, modular econometric method references, field-specific writing style, top-journal table/figure conventions, literature/citation integrity, and DOCX/OMML generation and validation.
+Turn a research question, dataset, draft, or result table into a defensible econometric design, an auditable Python model run, and an economics/management-style report. Keep identification, estimation, inference, writing, and document production connected through explicit specifications and validated artifacts.
+
+Resolve `SKILL_ROOT` to the directory containing this `SKILL.md` before running bundled scripts. Never assume the user's working directory is the skill directory.
 
 ## Routing
 
-1. For topic, identification, model choice, or method fit, read `references/method-selection.md`.
-2. For single-series, multivariate time-series, nonstationarity, VAR, threshold, kernel, GARCH/ARCH, Markov-switching, or time-varying coefficient methods, read `references/time-series-methods.md`.
-3. For static FE/RE, Mundlak/Hausman, GLS variance components, dynamic panels, heterogeneous slopes, panel trends, binary panels, panel VAR, spatial panels, or time-varying panels, read `references/panel-methods.md`.
-4. For IV, dynamic-panel IV/GMM, panel treatment effects, synthetic counterfactuals, DiD/event-study logic, or causal claim boundaries, read `references/iv-causal-methods.md`.
-5. For RDD, fuzzy RDD, propensity score matching, IPW, doubly robust weighting, PSM-DiD, or IPW-DiD, read `references/rdd-matching-methods.md`.
-6. For dataset intake, variable profiling, data quality, semantic roles, mechanism paths, model-ready checks, or EDA before econometric modeling, read `references/data-analysis-workflow.md`.
-7. For regression workflow, robustness, tables, or reproducibility, read `references/empirical-workflow.md`.
-8. For table/figure style, regression tables, descriptive tables, event-study figures, coefficient plots, visual QA, or top-journal layout conventions, read `references/tables-figures-style.md`.
-9. For paper search, literature review, source provenance, citation honesty, reference formatting, data/code citations, or Word superscript citations, read `references/literature-citation-workflow.md`.
-10. For abstract, introduction, empirical strategy, results, robustness, conclusion, or style polishing, read `references/econ-writing-style.md`.
-11. For Word output, formulas, rendering, superscript citation markers, or document QA, read `references/docx-workflow.md`.
-12. For deterministic dataset profiling, use `scripts/profile_econ_dataset.py`; for reference verification and enriched bibliography metadata, use `scripts/verify_references.py`; for DOCX generation, use `scripts/build_paper_docx.py`; for OMML helpers, use `scripts/omml_math.py`; for structural QA, use `scripts/check_docx_integrity.py`.
+Read only the references needed for the task:
+
+1. Identification, estimand, outcome family, or model fit: `references/method-selection.md`.
+2. Static FE/RE, Mundlak/Hausman, unbalanced panels, heterogeneous slopes, or panel dependence: `references/panel-methods.md`.
+3. Dynamic panels, difference/system GMM, panel unit roots, binary panels, panel thresholds/PVAR/spatial panels: `references/panel-dynamic-nonlinear-methods.md`.
+4. AR, unit roots, cointegration, ECM/VECM, Granger tests, VAR, or local projections: `references/time-series-methods.md`.
+5. Thresholds/breaks, nonparametric or time-varying series, bootstrap, GARCH, Markov switching, or flexible prediction: `references/time-series-nonlinear-volatility-methods.md`.
+6. IV/2SLS, weak instruments, DiD/event studies, heterogeneous adoption, synthetic counterfactuals, or causal-language boundaries: `references/iv-causal-methods.md`.
+7. RDD, fuzzy RDD, matching, IPW/AIPW, PSM-DiD, or IPW-DiD: `references/rdd-matching-methods.md`.
+8. Dataset intake, semantic roles, quality checks, mechanism maps, or model readiness: `references/data-analysis-workflow.md`.
+9. Python analysis JSON, supported estimators, execution, or normalized outputs: `references/python-execution.md`.
+10. Standard errors, clustering, few-cluster methods, weak-IV inference, GMM diagnostics, or multiplicity: `references/inference-guide.md`.
+11. Regression workflow, robustness, reproducibility, and authoritative result files: `references/empirical-workflow.md`.
+12. Tables, figures, event-study plots, coefficient plots, or visual QA: `references/tables-figures-style.md`.
+13. Literature search boundaries, citation integrity, metadata verification, or Word citation markers: `references/literature-citation-workflow.md`.
+14. Abstract, introduction, strategy, results, robustness, conclusion, or economics prose: `references/econ-writing-style.md`.
+15. Word generation, OMML, template behavior, rendering, and structural QA: `references/docx-workflow.md`.
 
 ## Default Workflow
 
-1. Clarify the research claim: outcome, treatment/regressor, unit, time, sample, and target interpretation.
-2. Audit the data structure: cross-section, time series, panel, balanced/unbalanced panel, binary outcome, nonstationary series, or high-dimensional nonlinear setting.
-3. Build a variable dictionary and causal/mechanism map before interpreting correlations: outcome, treatment/main regressor, controls, mechanisms, moderators, instruments, fixed effects, clustering unit, and bad controls.
-4. Choose one primary econometric family and one optional supporting robustness family. Do not mix methods without a clear identification or modeling reason.
-5. Define the baseline equation, assumptions, estimator, diagnostics, and threat model.
-6. Run or request method-matched checks: data quality, missingness, identifying variation, stationarity, lag order, FE/RE logic, IV validity, bandwidth sensitivity, residual diagnostics, placebo/falsification, or robustness by specification.
-7. If external literature is used, build a claim-to-source ledger, verify paper metadata, and never include fabricated or unsupported citations.
-8. Write the paper in economics/management style: claim first, method bounded by assumptions, results tied to tables/figures, limitations explicit.
-9. Format empirical tables and figures in top-journal style: three-line tables by default, self-contained notes, source notes, readable figures, and text callouts explaining what to look for.
-10. If the deliverable is Word, generate a `.docx` using the script/template, insert Word-native OMML formulas, use Word superscript runs for numeric citation markers when required, render pages, inspect layout, then run structural integrity checks.
-11. Classify files as final, formal archive, or temporary; remove scratch scripts/renders unless they are intentional reproducibility materials.
+1. Define outcome, treatment/regressor, unit, time, sample, estimand, target population, and claim boundary.
+2. Audit data structure and measurement before modeling.
+3. Build a declared variable dictionary and causal/mechanism map. Treat name-based role hints as provisional.
+4. Choose one primary estimator family and only threat-matched supporting specifications.
+5. State the baseline equation, identifying assumptions, covariance estimator, cluster dimensions, diagnostics, and failure conditions.
+6. Confirm that the requested estimator is implemented by the bundled Python core.
+7. Freeze and validate a versioned analysis JSON against `schemas/analysis-spec.schema.json`.
+8. Generate `analysis.py`, then execute it unless the user requested code generation only.
+9. Inspect `manifest.json`, `run.log`, `coefficients.csv`, `diagnostics.json`, warnings, and sample accounting before interpretation.
+10. Run method-matched robustness and falsification checks. Do not select specifications by significance.
+11. Write from authoritative run artifacts, report economic magnitudes and uncertainty, and keep causal claims within the design.
+12. If Word is required, validate the paper JSON, build DOCX, run assertion-based structural QA, render, and visually inspect every page.
+13. Classify outputs as final, formal archive, reproducibility material, or temporary; remove temporary test and render artifacts.
+
+## Python Execution Rules
+
+- The bundled execution layer runs in Python. `backend=auto` resolves to `python`.
+- Respect unsupported-estimator boundaries. Never replace heterogeneous-adoption DiD with ordinary TWFE, system GMM with naive FE, fuzzy RDD with sharp RDD, or another unrequested approximation.
+- `--dry-run` means validated Python code generation, not estimation.
+- Keep raw data read-only. Use dedicated run directories and preserve successful specifications, programs, manifests, logs, normalized coefficients, diagnostics, and environment information.
+- The local core implements OLS, FE/TWFE, classic/common-adoption DID, IV/2SLS, sharp local-polynomial RDD, and conditional AR(p). Advanced estimators remain design guidance unless implemented in the user's Python project.
+
+Inspect capabilities:
+
+```bash
+python3 "$SKILL_ROOT/scripts/run_econometric_analysis.py" --print-supported
+```
+
+Generate without estimating:
+
+```bash
+python3 "$SKILL_ROOT/scripts/run_econometric_analysis.py" analysis.json \
+  --backend python --dry-run --output-dir .qa/python_dry_run
+```
+
+Execute an accepted specification:
+
+```bash
+python3 "$SKILL_ROOT/scripts/run_econometric_analysis.py" analysis.json \
+  --backend python --output-dir results/baseline
+```
+
+Use `examples/analysis-spec.example.json` as a starting structure, not as substantive defaults.
 
 ## Method Boundaries
 
-- Treat Granger causality as predictive precedence, not structural causality.
-- Treat fixed effects as controls for time-invariant heterogeneity, not a full endogeneity solution.
-- Treat IV/dynamic panel estimates as assumption-dependent; state instrument relevance and exclusion restrictions.
-- Treat nonparametric/time-varying coefficient models as flexible heterogeneity or evolving association unless a separate identification design exists.
-- Treat cointegration as a stable long-run relation, not causal proof.
+- Granger causality is predictive precedence, not structural causality.
+- Fixed effects absorb time-invariant heterogeneity; they do not solve simultaneity or time-varying confounding.
+- IV and dynamic-panel estimates remain conditional on instrument/moment validity; weak-IV-robust inference does not repair invalid instruments.
+- Cointegration is a stable long-run relation, not causal proof.
+- Nonparametric, threshold, regime, and time-varying models describe flexible or evolving relationships unless separately identified.
+- Clustered or robust standard errors change inference, not identification.
+- An insignificant diagnostic is not proof that the maintained assumption holds.
 
-## DOCX Generation
-
-Use `assets/econ-paper-template.docx` as the long-term Word style template when a template is needed. For net-new papers from structured content, prefer:
+## Dataset Profiling
 
 ```bash
-python3 scripts/build_paper_docx.py input.json output.docx --template assets/econ-paper-template.docx
-python3 scripts/check_docx_integrity.py output.docx
-python3 scripts/render_validate_docx.py output.docx --output-dir .qa/econ_docx_render
+python3 "$SKILL_ROOT/scripts/profile_econ_dataset.py" data.csv \
+  --roles-json roles.json --out .qa/data-profile.md --json-out .qa/data-profile.json
 ```
 
-Rendered PNG/PDF files are temporary QA artifacts unless the user asks to keep them.
+The profiler performs deterministic structural and quality checks. It does not perform automatic unit-root tests or validate causal roles inferred from names.
 
-## Validation
+## Citation Verification
 
-Before final delivery:
+```bash
+python3 "$SKILL_ROOT/scripts/verify_references.py" references.json \
+  --out-md .qa/reference-verification.md \
+  --out-json .qa/reference-verification.json \
+  --out-enriched-json references-verified.json
+```
 
-1. Confirm the final file path and authority status.
-2. Confirm formulas are Word-native OMML when formulas matter.
-3. Confirm expected headings, tables, figures/media, references, and page count when applicable.
-4. Confirm citations are verified, source-backed, and formatted in the requested style; if superscript markers are expected, confirm they are true superscript runs.
-5. Render and visually inspect the `.docx`; if rendering is unavailable, state that visual QA could not be completed.
-6. Remove temporary files or explicitly mark them as temporary.
+Only DOI-resolved or independently corroborated metadata is verified automatically. A title-only candidate remains manual review. Metadata identity does not establish that a source supports a manuscript claim; maintain a claim-to-source ledger.
 
-## References And Assets
+## DOCX Generation And QA
 
-- `references/method-selection.md`: choose models from research question and data structure.
-- `references/time-series-methods.md`: AR, unit-root, threshold, kernel, cointegration, Granger, VAR, TV-VAR, and nonlinear time-series methods.
-- `references/panel-methods.md`: FE/RE, balanced/unbalanced panels, heterogeneous slopes, dynamic panels, panel nonstationarity, binary panels, and time-varying panels.
-- `references/iv-causal-methods.md`: IV/2SLS, dynamic-panel IV, DiD/event studies, and causal claim boundaries.
-- `references/rdd-matching-methods.md`: RDD, fuzzy RDD, propensity score matching, IPW, and combined matching/weighting DiD designs.
-- `references/data-analysis-workflow.md`: econometric dataset intake, variable semantics, quality checks, mechanism maps, and model-readiness rules.
-- `references/empirical-workflow.md`: end-to-end econometric analysis and robustness workflow.
-- `references/tables-figures-style.md`: economics/management top-journal table and figure conventions.
-- `references/literature-citation-workflow.md`: literature search, citation integrity, reference verification, and Word citation markers.
-- `references/econ-writing-style.md`: economics/management academic writing style and section templates.
-- `references/docx-workflow.md`: Word, OMML, render QA, and file-handling rules.
-- `assets/econ-paper-template.docx`: reusable standard paper template.
+Use `schemas/paper-docx.schema.json`, `examples/paper-docx.example.json`, and `assets/econ-paper-template.docx`.
+
+```bash
+python3 "$SKILL_ROOT/scripts/build_paper_docx.py" paper.json paper.docx \
+  --template "$SKILL_ROOT/assets/econ-paper-template.docx"
+python3 "$SKILL_ROOT/scripts/check_docx_integrity.py" paper.docx \
+  --require-headings --require-three-line-tables --forbid-grid-tables \
+  --fail-on-plain-citations --fail-on-nonblack-headings
+python3 "$SKILL_ROOT/scripts/render_validate_docx.py" paper.docx \
+  --output-dir .qa/econ_docx_render
+```
+
+Represent table math explicitly with `{"text": "beta_1", "math": true}` or `{"math": "beta_1"}`. Do not infer math from underscores or Greek-letter words in ordinary labels.
+
+## Validation Before Delivery
+
+1. Confirm the authoritative final file/run and any formal archive.
+2. Confirm the analysis spec, sample, estimator, covariance method, clusters, and diagnostics match the prose and tables.
+3. Confirm citations are verified and claim-supported; flag every unresolved candidate.
+4. Confirm formulas are native OMML when required and unsupported formula syntax failed explicitly.
+5. Run assertion-based DOCX checks with task-appropriate minimum counts.
+6. Render and visually inspect the DOCX. If rendering cannot run, report that QA as incomplete rather than successful.
+7. Run the bundled regression tests after modifying the skill.
+8. Remove temporary data, generated smoke-test programs, renders, PDFs/PNGs, lock files, and caches unless intentionally retained as reproducibility materials.
+
+## Long-Term Resources
+
+- `scripts/run_econometric_analysis.py`: validate, generate, execute, and normalize Python analyses.
+- `schemas/analysis-spec.schema.json`: versioned Python econometric execution contract.
+- `scripts/profile_econ_dataset.py`: deterministic dataset profiling.
+- `scripts/verify_references.py`: conservative Crossref metadata verification.
+- `scripts/build_paper_docx.py` and `scripts/omml_math.py`: DOCX and editable OMML generation.
+- `scripts/check_docx_integrity.py`: assertion-based structural validation.
+- `scripts/render_validate_docx.py`: page rendering for visual QA.
+- `assets/econ-paper-template.docx`: reusable paper template.

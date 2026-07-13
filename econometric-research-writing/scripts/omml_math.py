@@ -85,6 +85,10 @@ _DELIM_MAP = {
 }
 
 
+class UnsupportedFormulaSyntax(ValueError):
+    """Raised when the lightweight formula notation cannot be represented safely."""
+
+
 # ---------------------------------------------------------------------------
 # Low-level helpers
 # ---------------------------------------------------------------------------
@@ -272,11 +276,19 @@ def _read_brace_group(text, start):
             elif text[end] == "}":
                 depth -= 1
             end += 1
-        return (text[start + 1 : end - 1] if depth == 0 else text[start + 1 : end]), end
+        if depth != 0:
+            raise UnsupportedFormulaSyntax("Unclosed '{' group in formula.")
+        return text[start + 1 : end - 1], end
     if text[start] == "\\":
         cmd, end = _read_command_name(text, start)
         return "\\" + cmd, end
     return _read_base(text, start)
+
+
+def _read_required_brace_group(text, start, command):
+    if start >= len(text) or text[start] != "{":
+        raise UnsupportedFormulaSyntax(f"\\{command} requires a brace-delimited argument.")
+    return _read_brace_group(text, start)
 
 
 def _read_command_name(text, start):
@@ -292,8 +304,11 @@ def _read_command_name(text, start):
 def _read_script_value(text, start):
     """Read a sub/superscript value (single token or ``{…}`` group)."""
     if start >= len(text):
-        return "", start
-    return _read_brace_group(text, start)
+        raise UnsupportedFormulaSyntax("Subscript or superscript marker has no value.")
+    value, end = _read_brace_group(text, start)
+    if not value:
+        raise UnsupportedFormulaSyntax("Subscript or superscript value cannot be empty.")
+    return value, end
 
 
 def _skip_spaces(text, index):
@@ -329,7 +344,9 @@ def _read_math_atom(text, index):
         # Optional [] argument (e.g. \sqrt[3]{x}).
         if index < len(text) and text[index] == "[":
             bracket_end = text.find("]", index)
-            index = bracket_end + 1 if bracket_end >= 0 else len(text)
+            if bracket_end < 0:
+                raise UnsupportedFormulaSyntax("Unclosed '[' argument in formula.")
+            index = bracket_end + 1
         # Consecutive brace-group arguments.
         while index < len(text) and text[index] == "{":
             _, index = _read_brace_group(text, index)
@@ -362,6 +379,27 @@ def _apply_trailing_scripts(element, text, index):
     return element, index
 
 
+def _apply_trailing_scripts_to_elements(base_elements, text, index):
+    """Apply trailing scripts to a grouped expression and return a list."""
+    sub = sup = None
+    while index < len(text) and text[index] in {"_", "^"}:
+        marker = text[index]
+        value, index = _read_script_value(text, index + 1)
+        if marker == "_":
+            sub = value
+        else:
+            sup = value
+    if sub is None and sup is None:
+        return base_elements, index
+    return [
+        _script_node_rich(
+            base_elements,
+            _parse_elements(sub) if sub is not None else None,
+            _parse_elements(sup) if sup is not None else None,
+        )
+    ], index
+
+
 # ---------------------------------------------------------------------------
 # Recursive descent parser
 # ---------------------------------------------------------------------------
@@ -386,13 +424,23 @@ def _parse_elements(text):
             elements.append(_text_run(text[start:index]))
             continue
 
+        # ---- explicit grouped expression -----------------------------------
+        if char == "{":
+            content, index = _read_brace_group(text, index)
+            grouped, index = _apply_trailing_scripts_to_elements(
+                _parse_elements(content), text, index
+            )
+            elements.extend(grouped)
+            continue
+
+        if char == "}":
+            raise UnsupportedFormulaSyntax("Unmatched '}' in formula.")
+
         # ---- backslash command --------------------------------------------
         if char == "\\":
             cmd, index = _read_command_name(text, index)
             if not cmd:
-                # Bare backslash — render literally.
-                elements.append(_text_run("\\"))
-                continue
+                raise UnsupportedFormulaSyntax("Bare or unsupported backslash escape in formula.")
 
             # --- simple symbol replacement ---------------------------------
             if cmd in SYMBOLS:
@@ -411,9 +459,9 @@ def _parse_elements(text):
             # --- fraction: \frac{num}{den} ---------------------------------
             if cmd == "frac":
                 index = _skip_spaces(text, index)
-                num_text, index = _read_brace_group(text, index)
+                num_text, index = _read_required_brace_group(text, index, cmd)
                 index = _skip_spaces(text, index)
-                den_text, index = _read_brace_group(text, index)
+                den_text, index = _read_required_brace_group(text, index, cmd)
                 el = _fraction_node(
                     _parse_elements(num_text),
                     _parse_elements(den_text),
@@ -429,11 +477,11 @@ def _parse_elements(text):
                 if index < len(text) and text[index] == "[":
                     bracket_end = text.find("]", index)
                     if bracket_end < 0:
-                        bracket_end = len(text)
+                        raise UnsupportedFormulaSyntax("Unclosed degree argument for \\sqrt.")
                     degree_text = text[index + 1 : bracket_end]
-                    index = min(bracket_end + 1, len(text))
+                    index = bracket_end + 1
                 index = _skip_spaces(text, index)
-                content_text, index = _read_brace_group(text, index)
+                content_text, index = _read_required_brace_group(text, index, cmd)
                 el = _radical_node(
                     _parse_elements(content_text),
                     _parse_elements(degree_text) if degree_text else None,
@@ -445,7 +493,7 @@ def _parse_elements(text):
             # --- accent: \hat{x}, \bar{x}, \tilde{y}, … -------------------
             if cmd in ACCENTS:
                 index = _skip_spaces(text, index)
-                content_text, index = _read_brace_group(text, index)
+                content_text, index = _read_required_brace_group(text, index, cmd)
                 el = _accent_node(
                     ACCENTS[cmd],
                     _parse_elements(content_text),
@@ -473,6 +521,10 @@ def _parse_elements(text):
                         operand_text, index = _read_brace_group(text, index)
                     else:
                         operand_text, index = _read_math_atom(text, index)
+                if not operand_text:
+                    raise UnsupportedFormulaSyntax(
+                        f"\\{cmd} requires a non-empty operand; wrap it in braces."
+                    )
                 elements.append(_nary_node(
                     NARY_CHARS[cmd],
                     _parse_elements(sub) if sub is not None else None,
@@ -507,6 +559,8 @@ def _parse_elements(text):
                             scan = pend
                     else:
                         scan += 1
+                if depth != 0:
+                    raise UnsupportedFormulaSyntax("\\left has no matching \\right delimiter.")
                 index = scan
                 beg = _DELIM_MAP.get(open_char, open_char)
                 end = _DELIM_MAP.get(close_char, close_char)
@@ -521,29 +575,31 @@ def _parse_elements(text):
             # --- \text{…} — plain (upright) text inside math ---------------
             if cmd == "text":
                 index = _skip_spaces(text, index)
-                content, index = _read_brace_group(text, index)
-                elements.append(_styled_run(content, "p"))
+                content, index = _read_required_brace_group(text, index, cmd)
+                el = _styled_run(content, "p")
+                el, index = _apply_trailing_scripts(el, text, index)
+                elements.append(el)
                 continue
 
             # --- \mathbf{…} — bold math ------------------------------------
             if cmd == "mathbf":
                 index = _skip_spaces(text, index)
-                content, index = _read_brace_group(text, index)
-                elements.append(_styled_run(content, "b"))
+                content, index = _read_required_brace_group(text, index, cmd)
+                el = _styled_run(content, "b")
+                el, index = _apply_trailing_scripts(el, text, index)
+                elements.append(el)
                 continue
 
             # --- \mathit{…} — italic math (explicit) ----------------------
             if cmd == "mathit":
                 index = _skip_spaces(text, index)
-                content, index = _read_brace_group(text, index)
-                elements.append(_styled_run(content, "i"))
+                content, index = _read_required_brace_group(text, index, cmd)
+                el = _styled_run(content, "i")
+                el, index = _apply_trailing_scripts(el, text, index)
+                elements.append(el)
                 continue
 
-            # --- unknown command — render name as plain text ---------------
-            el = _text_run(cmd)
-            el, index = _apply_trailing_scripts(el, text, index)
-            elements.append(el)
-            continue
+            raise UnsupportedFormulaSyntax(f"Unsupported formula command: \\{cmd}")
 
         # ---- regular token with optional sub/superscripts -----------------
         base, index = _read_base(text, index)

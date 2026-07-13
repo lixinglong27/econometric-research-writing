@@ -1,6 +1,6 @@
 # Panel Methods
 
-Use this long-term reference when observations have cross-sectional and time dimensions, including country-year, firm-year, person-period, region-year, and market-period datasets. Pair it with `iv-causal-methods.md` when lagged outcomes, endogenous regressors, instruments, DiD, or explicit causal claims are involved.
+Use this core reference for static linear panels, fixed versus random effects, correlated random effects, heterogeneous slopes, unbalanced panels, and dependence-robust inference. Use [Dynamic And Nonlinear Panel Methods](panel-dynamic-nonlinear-methods.md) for dynamic GMM/QMLE, panel unit roots and cointegration, binary/limited outcomes, time-varying coefficients, panel VAR, or spatial panels. Pair either file with `iv-causal-methods.md` for instruments, DiD, treatment effects, or causal claims.
 
 ## Table Of Contents
 
@@ -10,144 +10,102 @@ Use this long-term reference when observations have cross-sectional and time dim
 - Random Effects, Variance Components, And GLS
 - FE Versus RE, Mundlak, And Hausman
 - Balanced And Unbalanced Panels
-- Cross-Sectional Dependence
-- Random Coefficient And Heterogeneous Slopes
-- Dynamic Panels
-- Panel Nonstationarity And Cointegration
-- Nonlinear Trends And Polynomial Panels
-- Binary Panel Models
-- Time-Varying And Trending Panels
-- Health Expenditure Application Template
+- Dependence And Panel Inference
+- Random Coefficients And Heterogeneous Slopes
 - Method-Matched Robustness
 - Claim Boundaries
+- See Also
 
 ## Panel Data Setup
 
 Use panel methods when both unit and time variation matter.
 
-Core families:
+Core linear families:
 
 ```text
-Homogeneous panel: Y_it = X_it' beta + e_it
-Heterogeneous panel: Y_it = X_it' beta_i + e_it
-Dynamic panel: Y_it = beta_0' (Y_{i,t-1}, ..., Y_{i,t-d}) + e_it
-Binary panel: Y_it = I[X_it' beta + e_it >= 0]
-Nonlinear homogeneous panel:
-Y_it = alpha + sum beta_j X_jit + sum gamma_kl X_jit X_kit + e_it
+Pooled/common slope:       Y_it = X_it' beta + e_it
+Unit fixed effect:         Y_it = X_it' beta + alpha_i + e_it
+Two-way fixed effects:     Y_it = X_it' beta + alpha_i + gamma_t + e_it
+Heterogeneous slopes:      Y_it = X_it' beta_i + alpha_i + e_it
 ```
 
-Methodology:
+Before choosing an estimator, state:
 
-- Use common slopes when the paper's target is an average association or elasticity.
-- Use heterogeneous slopes or random coefficients when unit-specific responses are substantive.
-- Use dynamic panels when lagged outcomes are part of the economic process.
-- Use binary panel models when the outcome is an indicator.
-- Include nonlinear or interaction terms when the economic response is curved or depends on covariate levels.
-
-Report:
-
-- Define the unit `i`, time `t`, sample window, balanced/unbalanced status, and outcome.
-- Explain why panel variation is needed rather than pooled cross-sections or separate time series.
+- Unit `i`, time `t`, sample window, outcome, and balanced/unbalanced status.
+- Which variation identifies each coefficient: within unit, between unit, or both.
+- Whether regressors are strictly exogenous, predetermined, or endogenous.
+- The likely dependence and treatment-assignment level for inference.
+- Whether dynamics, nonlinear outcomes, nonstationarity, common factors, or spillovers require the advanced panel reference.
 
 ## Fixed Effects And Random Effects
 
-Core fixed-effect model:
+Fixed-effects model:
 
 ```text
 Y_it = X_it' beta + alpha_i + e_it
 ```
 
-Two-way fixed-effect style model:
-
-```text
-Y_it = X_it' beta + alpha_i + gamma_t + epsilon_it
-```
-
-Decision rule:
-
-- Use fixed effects when unobserved unit heterogeneity may be correlated with regressors.
-- Use random effects only when unit effects are plausibly uncorrelated with regressors.
-- Add time effects when common shocks, macro cycles, or aggregate trends affect all units.
-
-Within estimation:
-
-- Demean by unit to eliminate `alpha_i`.
-- Demean by unit and time when using two-way effects.
-- Estimate `beta` by OLS on transformed variables.
-- For heterogeneous slopes, estimate within-unit slopes after removing unit effects.
-
-Report:
-
-- State FE or RE rationale.
-- Report whether time effects are included.
-- Avoid presenting fixed effects as a full endogeneity solution.
-
-## Static Fixed-Effect Estimators
-
-Use when the outcome depends on observed regressors and unit-specific omitted factors that may be correlated with regressors.
-
-One-way fixed effects:
-
-```text
-Y_it = alpha_i + X_it' beta + u_it
-```
-
-Equivalent estimators:
-
-- Least-squares dummy-variable estimator: include one unit dummy per unit, subject to the usual normalization.
-- Within/covariance estimator: premultiply each unit's equation by `Q = I_T - (1/T) ee'` and run OLS on demeaned data.
-- The within estimator identifies `beta` from deviations around each unit's time mean and does not estimate coefficients on time-invariant regressors.
-
-Estimator logic:
-
-```text
-beta_hat_within =
-[sum_i sum_t (X_it - X_i_bar)'(X_it - X_i_bar)]^{-1}
- sum_i sum_t (X_it - X_i_bar)'(Y_it - Y_i_bar)
-```
-
-Report:
-
-- State whether the estimator is LSDV or within; they estimate the same slope under the same specification.
-- Explain that FE uses within-unit variation and absorbs all time-invariant unit heterogeneity.
-- Note that intercept/unit-effect estimates are incidental to the main slope estimate when `N` is large and `T` is short.
-
-## Random Effects, Variance Components, And GLS
-
-Use when unit effects are treated as draws from a population and are plausibly uncorrelated with regressors.
-
-Variance-components model:
+Random-effects model:
 
 ```text
 Y_it = alpha + X_it' beta + a_i + u_it
 E(a_i | X_i) = 0
 E(u_it | X_i, a_i) = 0
+```
+
+Decision logic:
+
+- FE allows unit effects to be correlated with time-varying regressors and identifies slopes from within-unit changes.
+- RE combines within- and between-unit variation but requires the unit effect to be conditionally uncorrelated with the regressor history.
+- Add time effects when common calendar shocks matter. Time effects absorb common shocks with common coefficients; they do not necessarily remove heterogeneous exposure to latent factors.
+- Neither FE nor RE resolves simultaneity, reverse causality, time-varying omitted variables, or bad-control bias.
+
+Report the estimator, included effects, identifying variation, and why the maintained exogeneity assumptions fit the setting.
+
+## Static Fixed-Effect Estimators
+
+One-way FE:
+
+```text
+Y_it = alpha_i + X_it' beta + u_it
+```
+
+The least-squares dummy-variable and within estimators give the same slope under the same specification. The within estimator uses:
+
+```text
+beta_hat_FE =
+[sum_i sum_t (X_it - X_i_bar)'(X_it - X_i_bar)]^{-1}
+ sum_i sum_t (X_it - X_i_bar)'(Y_it - Y_i_bar)
+```
+
+Implications:
+
+- FE absorbs all time-invariant unit attributes, observed or unobserved.
+- A coefficient on a time-invariant regressor is not identified with unrestricted unit FE.
+- Variables with little within-unit variation can be weakly identified even in a large dataset.
+- With a lagged outcome and short `T`, the within estimator generally has Nickell bias; route to the advanced dynamic-panel section.
+
+## Random Effects, Variance Components, And GLS
+
+Variance-components setup:
+
+```text
 Var(a_i) = sigma_a^2
 Var(u_it) = sigma_u^2
 ```
 
-Methodology:
-
-- Estimate variance components for the unit effect and idiosyncratic error.
-- Use feasible GLS or quasi-demeaning, subtracting a fraction of each unit mean from `Y_it` and `X_it`.
-- Interpret RE GLS as an intermediate weighted combination of within variation and between variation.
-- When the RE weight collapses toward the within estimator, between variation is effectively down-weighted; when it collapses toward pooled OLS, unit effects matter less.
+Feasible RE GLS estimates the variance components and quasi-demeans each unit by subtracting a fraction of its time mean. It is a weighted combination of within and between variation.
 
 Report:
 
-- State the assumed exogeneity of `a_i` with respect to regressors.
-- Report variance components or intra-class correlation when they help explain the RE choice.
-- Do not use RE only because it is more efficient; efficiency is relevant only after the RE exogeneity assumption is credible.
+- The assumption `E(a_i | X_i)=0`, not merely an efficiency argument.
+- Variance components or the intra-class correlation when informative.
+- How unbalanced units are handled.
+- A correlated-RE/Mundlak check when correlation with unit effects is plausible.
+
+Do not use a misspecified FGLS covariance model to manufacture small standard errors. Model-based GLS efficiency requires its covariance structure; dependence-robust inference addresses a different question.
 
 ## FE Versus RE, Mundlak, And Hausman
-
-Use this section when choosing between fixed effects and random effects, or when the paper needs a formal bridge between them.
-
-Decision logic:
-
-- FE allows arbitrary correlation between `alpha_i` and time-varying regressors.
-- RE is more parsimonious and can estimate time-invariant regressors, but requires no correlation between unit effects and regressors.
-- The key empirical issue is not only efficiency; it is whether the model treats unit heterogeneity as conditional on the sample or drawn from a population.
 
 Mundlak correlated-random-effects formulation:
 
@@ -156,370 +114,84 @@ alpha_i = X_i_bar' theta + omega_i
 Y_it = X_it' beta + X_i_bar' theta + omega_i + u_it
 ```
 
-Methodology:
-
-- Add unit-level means of time-varying regressors to the RE specification.
-- Test whether the coefficients on unit means are jointly zero.
-- If the unit-mean coefficients are nonzero, regressors are correlated with unit effects and plain RE is misspecified.
-- Use Mundlak as a transparent way to preserve time-invariant regressors while modeling correlated unit effects.
+Add unit means of time-varying regressors to RE. Jointly nonzero mean terms indicate that plain RE's orthogonality restriction is incompatible with the data. Correlated RE can retain time-invariant regressors while making the modeled source of correlation explicit.
 
 Hausman logic:
 
 ```text
-H = (beta_FE - beta_RE)' [Var(beta_FE) - Var(beta_RE)]^{-1} (beta_FE - beta_RE)
+H = (beta_FE - beta_RE)'
+    [Var(beta_FE) - Var(beta_RE)]^{-1}
+    (beta_FE - beta_RE)
 ```
 
-Methodology:
+Use the Hausman comparison only when the two estimators, covariance estimates, and coefficient sets are genuinely comparable. If the covariance difference is indefinite or the test is unstable, do not select a model mechanically: prioritize the design's exogeneity argument and a Mundlak specification.
 
-- Compare an estimator consistent under both null and alternative, usually FE, with an estimator efficient under the RE null, usually RE.
-- Under the null, both are consistent and coefficient differences should be small.
-- Under the alternative, RE is inconsistent and FE remains the safer slope estimator.
-
-Report:
-
-- If using RE, state the exogeneity assumption and whether Mundlak/Hausman evidence supports it.
-- If using FE, state what is sacrificed: time-invariant regressors and between-unit interpretation.
-- If Hausman covariance differences are not positive definite or the test is unstable, prefer substantive exogeneity reasoning and Mundlak-style diagnostics over mechanical decisions.
+Report what FE sacrifices—time-invariant coefficients and a direct between-unit interpretation—and what RE assumes in exchange.
 
 ## Balanced And Unbalanced Panels
 
-Use explicit handling when units have unequal observation counts.
+- A balanced panel has the same `T` for every unit; an unbalanced panel uses each available `T_i` in transformations and sums.
+- Report units, time periods, observations, and the distribution of `T_i` when imbalance is material.
+- Check whether attrition, entry, or missingness is related to treatment or outcomes; standard FE/RE does not repair informative sample selection.
+- Describe every restriction used to form a balanced subsample and compare it with the main sample.
+- Forward orthogonal deviations can preserve more observations than first differencing in some dynamic unbalanced panels, but the same moment-validity assumptions remain necessary.
 
-Methodology:
+## Dependence And Panel Inference
 
-- For balanced panels, each unit has the same `T`.
-- For unbalanced panels, use each unit's available `T_i` in demeaning, sums, and diagnostics.
-- Check whether missingness is random or related to outcomes/treatments.
-- Avoid silently dropping many observations without describing the sample change.
+Choose the covariance estimator from the sampling and assignment process, not from whichever option yields significance.
 
-Report:
+Within-unit dependence:
 
-- State the number of units, time periods, and observations.
-- Report whether the main sample is balanced or unbalanced.
-- If a balanced subsample is used for robustness, describe what is lost.
+- Serial correlation and heteroskedasticity within units usually motivate unit-clustered standard errors when the number of independent units is sufficiently large.
+- If treatment is assigned at a higher group level, cluster at that assignment level even when observations are individual or unit-period records.
+- With few clusters, conventional cluster-robust asymptotics can over-reject. Use an appropriate degrees-of-freedom correction, CR2/CR3-type adjustment, randomization inference, or wild-cluster procedure when its assumptions fit, and report the number and balance of clusters.
 
-## Cross-Sectional Dependence
+Cross-sectional and multiway dependence:
 
-Use when units may share common shocks, supply chains, regional spillovers, or macro trends.
+- Shared shocks, supply chains, geography, or networks can correlate errors across units. Inspect residual dependence and reason from the data-generating process rather than relying on one test.
+- Two-way clustering by unit and time can cover arbitrary dependence within either dimension, but it needs enough independent clusters in both dimensions; a long list of observations is not a substitute.
+- Driscoll–Kraay-type inference can be useful under broad cross-sectional and serial dependence when `T` is sufficiently large; it is not a cure for short panels or omitted common factors.
+- If latent common factors correlate with regressors, add a factor structure or common-correlated-effects (CCE) terms. Changing standard errors alone does not repair slope inconsistency.
+- Time FE absorb shocks common with homogeneous loadings. Interactive effects or CCE methods are needed when exposure is heterogeneous and substantively important.
 
-Methodology:
+Report the clustering dimensions, number of clusters, small-sample adjustment, and why they match assignment and residual dependence.
 
-- Inspect pairwise residual correlations after fitting the baseline model.
-- Use tests based on summed pairwise residual correlations when `N` panels may not be independent.
-- Add time effects, common factors, clustered inference, or factor-augmented models when dependence is material.
+## Random Coefficients And Heterogeneous Slopes
 
-Report:
-
-- State whether common shocks are controlled.
-- Avoid overconfident standard errors when cross-sectional dependence is plausible.
-
-## Random Coefficient And Heterogeneous Slopes
-
-Use when the distribution of unit-specific effects or elasticities is central.
-
-Core model:
+Use when the distribution of unit-specific responses is a target rather than a nuisance.
 
 ```text
 Y_it = X_it' beta_i + alpha_i + epsilon_it
 ```
 
-Methodology:
+Options:
 
-- Estimate each `beta_i` by within-unit OLS after eliminating `alpha_i`.
-- Estimate the average coefficient by averaging unit-level slope estimates.
-- Avoid multiple intercept-like terms in addition to `alpha_i`.
-- When variables are log-transformed, interpret `beta_i` as unit-specific elasticity.
+- Mean-group estimation: estimate unit slopes and average them; it requires enough within-unit time observations for each slope.
+- Random-coefficient/hierarchical models: partially pool unit slopes under an explicit distributional structure.
+- CCE mean-group approaches: add cross-sectional averages or estimated factors when common correlated shocks coexist with heterogeneous slopes.
 
-Report:
-
-- Report the distribution, quantiles, range, or plots of `beta_i`, not only the average.
-- Compare heterogeneous estimates with the homogeneous fixed-effect model.
-
-## Dynamic Panels
-
-Use when the lagged dependent variable is economically necessary.
-
-Core model:
-
-```text
-Y_it = beta Y_{i,t-1} + alpha_i + epsilon_it
-```
-
-Differenced form:
-
-```text
-Delta Y_it = beta Delta Y_{i,t-1} + Delta epsilon_it
-```
-
-Methodology:
-
-- Recognize that demeaning or differencing with lagged outcomes creates endogeneity because transformed lagged outcomes are correlated with transformed errors.
-- Use differenced IV, Arellano-Bond-style GMM, forward orthogonal deviations, QMLE, or conditional-mean approaches depending on assumptions and panel dimensions; see `iv-causal-methods.md` for IV/GMM details.
-- Include exogenous covariates only under explicit exogeneity assumptions.
-
-Estimator menu:
-
-- Differenced IV: difference the equation to remove `alpha_i`, then instrument `Delta Y_{i,t-1}` with valid lagged levels such as `Y_{i,t-2}` under no serial correlation in the original error.
-- Arellano-Bond GMM: stack differenced equations and exploit multiple lag moment conditions, weighting the sample moments by a suitable matrix.
-- Forward orthogonal deviations: transform each observation by subtracting the average of future observations, preserving sample size in unbalanced panels and keeping transformed errors orthogonal under suitable conditions.
-- Random-effects likelihood/QMLE: model the covariance structure implied by the unit effect and lagged outcome; efficient when distribution and initial-condition assumptions are credible.
-- Conditional mean approach: model the conditional mean of the individual effect and initial observation as functions of regressor histories, then estimate the resulting level system by GLS/QMLE.
-
-Report:
-
-- State why dynamics are needed.
-- State the estimator and instrument set.
-- State how the initial condition `Y_i0` is handled when using likelihood or conditional-mean approaches.
-- Report serial-correlation checks and instrument-count discipline when using GMM.
-- Avoid naive fixed-effect OLS as the final dynamic-panel estimator unless the bias is addressed or justified as negligible.
-
-## Panel Nonstationarity And Cointegration
-
-Use when panel variables are persistent and may contain unit roots.
-
-Dynamic panel unit-root logic:
-
-```text
-Delta Y_it = beta_i Delta Y_{i,t-1} + Delta epsilon_it
-Test whether beta_i = 1 or all beta_i are close to 1.
-```
-
-Panel cointegration:
-
-```text
-Y_it = X_it' beta + alpha_i + epsilon_it
-Panel cointegration: Y_it - X_it' beta is stationary even if Y_it and X_it are nonstationary.
-```
-
-Methodology:
-
-- Estimate unit-specific persistence parameters when heterogeneity matters.
-- Use standardized statistics based on `(beta_hat_i - 1) / se(beta_hat_i)` and aggregate over units for large panels.
-- Estimate fixed-effect cointegrating relations, then test residual persistence.
-
-Report:
-
-- Separate unit-root evidence from cointegration evidence.
-- Discuss whether stationarity/cointegration appears homogeneous across units.
-- Do not interpret panel cointegration as causal proof.
-
-## Nonlinear Trends And Polynomial Panels
-
-Use when time trends are substantive or nonlinear trends are needed as controls.
-
-Linear trend panel:
-
-```text
-Y_it = mu + beta t + e_it
-e_it = alpha_i + epsilon_it
-```
-
-Nonlinear trend panel:
-
-```text
-Y_it = X_it' beta + g_t + alpha_i + epsilon_it
-```
-
-Examples:
-
-```text
-Polynomial trend: theta_0 + theta_1 t + ... + theta_p t^p
-Periodic trend: sin(2 pi t)
-```
-
-Methodology:
-
-- Use time effects or demeaning when the trend is a nuisance control.
-- Estimate the trend explicitly when it is the substantive object.
-- Choose polynomial order conservatively.
-- Plot the trend when it carries the empirical result.
-
-## Binary Panel Models
-
-Use when the dependent variable is an indicator.
-
-Latent-index setup:
-
-```text
-Y_it = I[X_it' beta_i + alpha_i - epsilon_it >= 0]
-P(Y_it = 1 | X_it, alpha_i) = F(X_it' beta_i + alpha_i)
-```
-
-Methodology:
-
-- Choose homogeneous `beta` or heterogeneous `beta_i`.
-- Specify a link/CDF such as logistic or normal.
-- Construct the likelihood from Bernoulli probabilities.
-- Estimate fixed effects and slopes by maximum likelihood.
-
-Report:
-
-- Interpret marginal effects or probability changes, not raw coefficients alone.
-- Discuss fixed-effect complications when `T` is short.
-
-## Time-Varying And Trending Panels
-
-Use when panel coefficients evolve smoothly over time and the evolution is central.
-
-Nonparametric time-varying coefficient panel:
-
-```text
-Y_it = f_t + X_it' beta_t + alpha_i + e_it
-f_t = f(t/T), beta_t = beta(t/T)
-sum_i alpha_i = 0
-```
-
-Local linear approximation:
-
-```text
-Y_it approx X_it^*' beta^*(tau)
-      + X_it^*' beta^{*'}(tau) (tau_t - tau)
-      + alpha_i + e_it
-```
-
-Semiparametric trending panel:
-
-```text
-Y_it = X_it' beta + f_t + alpha_i + e_it
-```
-
-Factor-augmented time-varying panel:
-
-```text
-y_it = x_it' beta_i(tau_t) + lambda_i' F_t + epsilon_it
-x_it = g_i(tau_t) + gamma_i' G_t + eta_it
-```
-
-Methodology:
-
-- Impose an identification restriction on fixed effects, such as `sum_i alpha_i = 0`.
-- Estimate coefficient paths by local linear dummy-variable estimation.
-- Use kernel weights around each `tau`.
-- For trending panels, profile out the smooth trend and then estimate constant slopes.
-- For factor-augmented panels, estimate common factors/loadings by PCA or iterative least squares, then estimate time-varying coefficients conditional on factors.
-
-Report:
-
-- Make coefficient paths the central empirical object.
-- Report bandwidth and sensitivity.
-- State whether fixed effects, common trends, or factors are controlled.
-
-## Health Expenditure Application Template
-
-Use as a reusable applied panel-paper template when the topic resembles health expenditure, macro panels, country panels, or expenditure elasticities.
-
-Baseline individual fixed-effect model:
-
-```text
-lnHE_it = beta_1 lnGDP_it + beta_2 pop65_it
-        + beta_3 pop14_it + beta_4 public_it + alpha_i + u_it
-```
-
-Methodology:
-
-- Inspect the probabilistic structure and persistence of regressors.
-- Run unit-root or panel unit-root checks when variables are persistent.
-- Model A: homogeneous fixed-effect panel slope by within OLS.
-- Model B: heterogeneous country-specific slopes by within OLS.
-- Compare panel and time-series formulations:
-
-```text
-Panel:      Y_it = alpha_i + X_it' beta_i + epsilon_it
-Time series: y_t = alpha + x_t' beta + epsilon_t
-```
-
-Report:
-
-- Report homogeneous and heterogeneous estimates separately.
-- Plot country-specific intercepts or slopes when heterogeneity matters.
-- Interpret GDP elasticity carefully and avoid causal wording without an identification design.
+Report the mean, dispersion, quantiles, and supported unit-level estimates; do not show only the most favorable units. Compare with a common-slope model and distinguish true heterogeneity from noisy short-`T` estimates.
 
 ## Method-Matched Robustness
 
-- FE/RE panels: fixed versus random effects rationale, time effects, clustering, cross-sectional dependence.
-- Mundlak/Hausman: correlated-random-effects terms, Hausman statistic, and substantive exogeneity reasoning.
-- Heterogeneous slopes: distribution of unit estimates and comparison with homogeneous slopes.
-- Dynamic panels: alternative instruments, lag depth, instrument count, first-difference versus forward-orthogonal-deviation transformation, QMLE versus GMM sensitivity, finite-sample sensitivity, serial correlation checks.
-- Nonstationary panels: panel unit-root alternatives and residual cointegration checks.
-- Binary panels: link function, marginal effects, fixed-effect treatment.
-- Panel VAR: lag order, stability, impulse-response uncertainty, ordering or structural restrictions, and cross-sectional dependence.
-- Spatial panels: spatial weights definition, alternative weights, spatial spillover interpretation, and direct/indirect effect decomposition.
-- Time-varying panels: bandwidth sensitivity, coefficient-path confidence bands, common-factor controls.
+- FE/RE: within variation, time effects, correlated-RE terms, and substantive exogeneity reasoning.
+- Hausman/Mundlak: comparable coefficient sets, covariance choice, joint tests of unit means, and instability of mechanical Hausman decisions.
+- Unbalanced panels: attrition/entry patterns and a transparently defined balanced-sample sensitivity check.
+- Inference: assignment-level clustering, alternative credible dependence structures, cluster counts, and few-cluster corrections.
+- Cross-sectional dependence: time effects versus heterogeneous common factors, CCE/factor controls, and large-`T` dependence-robust inference.
+- Heterogeneous slopes: distribution and precision of unit estimates, shrinkage/mean-group sensitivity, and comparison with pooled slopes.
 
 ## Claim Boundaries
 
-- Fixed effects control time-invariant unit heterogeneity, not simultaneity or time-varying omitted variables.
-- Random effects require uncorrelated unit effects and regressors.
-- Dynamic panel estimates depend on valid instruments and lag structure.
-- Mundlak and Hausman diagnostics test compatibility with RE assumptions; they do not create exogeneity.
-- Time-varying panel models show evolving associations unless paired with credible identification.
-- Panel cointegration indicates a stable long-run relation, not causality.
-
-## Panel VAR
-
-Use when multiple panel variables are jointly endogenous and the research question concerns dynamic feedback across variables.
-
-Basic PVAR:
-
-```text
-y_it = A_1 y_{i,t-1} + ... + A_p y_{i,t-p} + alpha_i + lambda_t + epsilon_it
-```
-
-Workflow:
-
-1. Define the endogenous variable vector before estimating.
-2. Choose lag order using information criteria and substantive timing.
-3. Remove fixed effects with an appropriate transformation.
-4. Estimate using GMM or bias-corrected approaches when `T` is short.
-5. Check stability of the companion matrix.
-6. Report impulse responses with confidence intervals.
-7. Explain identification assumptions if interpreting shocks structurally.
-
-Writing boundary:
-
-- Reduced-form PVAR shows dynamic association and feedback.
-- Causal shock interpretation requires ordering restrictions, external instruments, sign restrictions, or another identification strategy.
-
-## Spatial Panel Models
-
-Use when outcomes or shocks spill across geographic, product, firm-network, or market-neighbor units.
-
-Spatial lag panel:
-
-```text
-Y_it = rho W Y_it + X_it' beta + alpha_i + lambda_t + epsilon_it
-```
-
-Spatial error panel:
-
-```text
-Y_it = X_it' beta + alpha_i + lambda_t + u_it
-u_it = rho W u_it + epsilon_it
-```
-
-Spatial Durbin panel:
-
-```text
-Y_it = rho W Y_it + X_it' beta + W X_it' theta + alpha_i + lambda_t + epsilon_it
-```
-
-Workflow:
-
-1. Justify the spatial weights matrix `W` before seeing results.
-2. Row-standardize or otherwise normalize `W` transparently.
-3. Test or motivate spatial dependence.
-4. Include unit and time effects when panel structure supports them.
-5. Report direct, indirect, and total effects rather than only raw coefficients when spatial feedback is present.
-6. Test sensitivity to alternative plausible weights matrices.
-
-Writing boundary:
-
-- Spatial correlation does not by itself establish spillover causality.
-- The definition of neighbors is part of the identifying argument and must be defensible.
+- FE controls time-invariant unit heterogeneity, not all endogeneity.
+- RE and model-based GLS depend on their orthogonality and covariance assumptions.
+- Clustered or dependence-robust standard errors change inference, not identification or the point-estimand target.
+- Mundlak and Hausman diagnostics assess compatibility with RE restrictions; they do not create exogeneity.
+- Heterogeneous-slope estimates are associations unless a separate identification design supports causal effects.
 
 ## See Also
 
 - [Method Selection](method-selection.md)
+- [Dynamic And Nonlinear Panel Methods](panel-dynamic-nonlinear-methods.md)
 - [IV and Causal Methods](iv-causal-methods.md)
 - [RDD and Matching Methods](rdd-matching-methods.md)
-

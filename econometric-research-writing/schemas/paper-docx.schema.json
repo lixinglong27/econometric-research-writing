@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openai.local/econometric-research-writing/paper-docx.schema.json",
+  "title": "Economics paper DOCX input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title"],
+  "properties": {
+    "title": {"type": "string"},
+    "author": {"type": "string"},
+    "affiliation": {"type": "string"},
+    "date": {"type": "string"},
+    "abstract": {"type": "string"},
+    "keywords": {
+      "oneOf": [
+        {"type": "string"},
+        {"type": "array", "items": {"type": "string"}}
+      ]
+    },
+    "sections": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/section"}
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"type": "string"},
+          {"$ref": "#/$defs/textOrRuns"}
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": {"type": ["string", "number", "integer", "boolean"]},
+        "bold": {"type": "boolean"},
+        "italic": {"type": "boolean"},
+        "superscript": {"type": "boolean"},
+        "subscript": {"type": "boolean"},
+        "size": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "textOrRuns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {"type": "string"},
+        "runs": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {"$ref": "#/$defs/run"}
+            ]
+          }
+        }
+      },
+      "oneOf": [
+        {"required": ["text"]},
+        {"required": ["runs"]}
+      ]
+    },
+    "paragraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {"const": "paragraph"},
+        "text": {"type": "string"},
+        "runs": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {"$ref": "#/$defs/run"}
+            ]
+          }
+        },
+        "size": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "oneOf": [
+        {"required": ["text"]},
+        {"required": ["runs"]}
+      ]
+    },
+    "equation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": {"const": "equation"},
+        "text": {"type": "string", "minLength": 1}
+      }
+    },
+    "tableCell": {
+      "oneOf": [
+        {"type": ["string", "number", "integer", "boolean", "null"]},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "text": {"type": ["string", "number", "integer", "boolean"]},
+            "math": {"oneOf": [{"type": "boolean"}, {"type": "string"}]},
+            "bold": {"type": "boolean"},
+            "italic": {"type": "boolean"},
+            "size": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "anyOf": [
+            {"required": ["text"]},
+            {"required": ["math"]}
+          ]
+        }
+      ]
+    },
+    "mergeObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "row": {"type": "integer", "minimum": 0},
+        "start_col": {"type": "integer", "minimum": 0},
+        "end_col": {"type": "integer", "minimum": 0},
+        "col": {"type": "integer", "minimum": 0},
+        "start_row": {"type": "integer", "minimum": 0},
+        "end_row": {"type": "integer", "minimum": 0}
+      },
+      "anyOf": [
+        {
+          "required": ["row", "start_col", "end_col"]
+        },
+        {
+          "required": ["col", "start_row", "end_row"]
+        }
+      ]
+    },
+    "merge": {
+      "oneOf": [
+        {"$ref": "#/$defs/mergeObject"},
+        {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 4,
+          "prefixItems": [
+            {"type": "integer", "minimum": 0},
+            {"type": "integer", "minimum": 0},
+            {"type": "integer", "minimum": 0},
+            {"type": "string", "enum": ["vertical"]}
+          ]
+        }
+      ]
+    },
+    "note": {
+      "oneOf": [
+        {"type": "string"},
+        {
+          "type": "array",
+          "items": {"type": ["string", "number", "integer", "boolean"]}
+        }
+      ]
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "rows"],
+      "properties": {
+        "type": {"const": "table"},
+        "caption": {"type": "string"},
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"$ref": "#/$defs/tableCell"}
+          }
+        },
+              "header_rows": {"type": "integer", "minimum": 1},
+              "repeat_header": {"type": "boolean", "default": true},
+              "column_widths_inches": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "number", "exclusiveMinimum": 0}
+              },
+              "column_alignments": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"enum": ["left", "center", "right"]}
+              },
+        "header_merges": {"type": "array", "items": {"$ref": "#/$defs/merge"}},
+        "merges": {"type": "array", "items": {"$ref": "#/$defs/merge"}},
+        "style": {"type": "string", "enum": ["three-line", "grid"]},
+        "notes": {"$ref": "#/$defs/note"},
+        "source": {"$ref": "#/$defs/note"}
+      }
+    },
+    "figure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "path"],
+      "properties": {
+        "type": {"const": "figure"},
+        "path": {"type": "string", "minLength": 1},
+        "width_inches": {"type": "number", "exclusiveMinimum": 0},
+        "caption": {"type": "string"},
+        "caption_position": {"type": "string", "enum": ["above", "below"]},
+        "notes": {"$ref": "#/$defs/note"},
+        "source": {"$ref": "#/$defs/note"}
+      }
+    },
+    "contentItem": {
+      "oneOf": [
+        {"type": "string"},
+        {"$ref": "#/$defs/paragraph"},
+        {"$ref": "#/$defs/equation"},
+        {"$ref": "#/$defs/table"},
+        {"$ref": "#/$defs/figure"}
+      ]
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading", "content"],
+      "properties": {
+        "heading": {"type": "string"},
+        "style": {"type": "string"},
+        "content": {"type": "array", "items": {"$ref": "#/$defs/contentItem"}}
+      }
+    }
+  }
+}

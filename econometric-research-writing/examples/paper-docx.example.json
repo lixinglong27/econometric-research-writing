@@ -1,0 +1,45 @@
+{
+  "title": "A Minimal Econometric Research Paper",
+  "author": "Example Author",
+  "date": "2026-07-10",
+  "abstract": "This runnable example demonstrates paragraphs, editable equations, grouped headers, explicit table math, notes, and references.",
+  "keywords": ["panel data", "fixed effects"],
+  "sections": [
+    {
+      "heading": "1. Empirical Strategy",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "The baseline specification uses unit and time fixed effects."
+        },
+        {
+          "type": "equation",
+          "text": "y_{it} = beta_0 + beta_1 x_{it} + alpha_i + gamma_t + epsilon_{it}"
+        },
+        {
+          "type": "table",
+          "caption": "Table 1. Minimal regression table",
+          "header_rows": 2,
+          "repeat_header": true,
+          "column_widths_inches": [2.4, 1.7, 1.7],
+          "column_alignments": ["left", "center", "center"],
+          "rows": [
+            ["", "Outcome: y", ""],
+            ["Variable", "(1)", "(2)"],
+            [{"text": "beta_1", "math": true}, "0.120", "0.115"],
+            ["firm_id fixed effects", "Yes", "Yes"],
+            ["Observations", "100", "100"]
+          ],
+          "header_merges": [
+            {"row": 0, "start_col": 1, "end_col": 2}
+          ],
+          "notes": "Standard errors would normally appear below coefficients.",
+          "source": "Author calculations."
+        }
+      ]
+    }
+  ],
+  "references": [
+    "Example, A. 2026. A verified reference would appear here."
+  ]
+}

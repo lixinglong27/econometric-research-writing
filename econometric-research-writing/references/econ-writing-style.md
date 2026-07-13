@@ -2,6 +2,15 @@
 
 Use this reference when drafting, restructuring, or polishing economics, finance, management, or applied econometrics prose.
 
+## Table Of Contents
+
+- Style Principles
+- Section Templates
+- Literature And Citation Style
+- Preferred Wording
+- Method-Specific Language
+- Polishing Checklist
+
 ## Style Principles
 
 - Lead with the research question and empirical claim.
@@ -54,6 +63,7 @@ Include:
 - Estimator.
 - Identifying or interpretation assumptions.
 - Standard errors and fixed effects.
+- Backend/estimator implementation and the inference procedure when they materially affect reproducibility.
 - Threats the design addresses and does not address.
 
 ### Results
@@ -67,6 +77,8 @@ Write from table to interpretation:
 5. "However, this estimate should be interpreted as..."
 
 Every table or figure callout should tell the reader what to look for. Avoid empty callouts such as "see Table 2" without an empirical takeaway.
+
+Base numerical claims on the validated run outputs, not values copied manually from a console or screenshot. State the covariance estimator and cluster dimensions/counts near the first primary result, and report method-specific diagnostics before using causal language.
 
 ### Robustness
 
@@ -130,4 +142,5 @@ Avoid:
 - Check that every causal verb has a design justification.
 - Check consistency of terminology across tables, figures, and prose.
 - Keep equations close to the text that explains them.
+- Check that coefficient values, uncertainty intervals, sample sizes, fixed effects, and diagnostics agree with the authoritative model-result files.
 - Check that every citation-backed sentence has a real, verified source and that every reference-list entry is cited.

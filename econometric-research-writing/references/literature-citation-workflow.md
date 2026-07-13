@@ -2,6 +2,19 @@
 
 Use this reference when finding papers, building a literature review, adding citations to a draft, verifying references, formatting a bibliography, citing data/code, or generating Word documents with author-year, footnote, or numeric superscript citations.
 
+## Table Of Contents
+
+- Honesty Contract
+- Search Strategy
+- Screening Rules
+- Claim-To-Source Ledger
+- Citation Style Defaults
+- Word Citation Markers
+- Reference Verification Output
+- Reference List Entries
+- Literature Review Writing
+- Citation QA
+
 ## Honesty Contract
 
 - Do not invent papers, authors, titles, venues, years, DOIs, page ranges, URLs, datasets, or quotes.
@@ -24,7 +37,7 @@ Start from the user's topic, claim, or draft sentence and create a search plan:
 When the agent has access to local skills or tools, prefer specialized search tools before ad hoc web browsing. Rather than hardcoding specific database clients into the writing skill, leverage the Model Context Protocol (MCP) and available environment tools as an abstract retrieval interface:
 
 - **Literature Search Boundary**: Call available academic search MCP tools (e.g., Semantic Scholar search, Google Scholar wrappers, or local library query engines) to locate papers and compile raw bibliography records into a standard `references.json` file.
-- **Verification Decoupling**: Once the raw JSON file is generated, execute `scripts/verify_references.py` to cross-validate, normalize metadata using the open Crossref endpoint, and generate an enriched reference database.
+- **Verification Decoupling**: Once the raw JSON file is generated, execute `scripts/verify_references.py` to compare Unicode-normalized title, author, year, and venue metadata against Crossref and generate an enriched reference database. A title-only result is a `candidate_match`, not a verified identity; accept `verified_by_metadata` only when another supplied identity field corroborates the title, or `verified_by_doi` when supplied metadata does not conflict with the DOI record.
 - **Zotero Integration**: If Zotero local-library integration is configured, query Zotero collections to populate the reference database instead of querying web databases.
 
 ## Screening Rules
@@ -77,7 +90,7 @@ Numeric superscript citations are not the default for economics, but must be sup
 
 When numeric citation markers, footnote markers, or endnote-style markers are required in Word:
 
-- Use true Word superscript formatting for the marker, not plain正文 text such as `[1]` or `^1`.
+- Use true Word superscript formatting for the marker, not plain text such as `[1]` or `^1`.
 - In generated `.docx`, create a run with `font.superscript = True` or equivalent OOXML `w:vertAlign w:val="superscript"`.
 - Keep the citation marker immediately after the cited clause or sentence punctuation according to the target style.
 - Do not convert superscript citation markers to Unicode superscript characters as the primary representation; Word styling is easier to inspect and revise.
@@ -106,7 +119,7 @@ Use `scripts/verify_references.py` to verify and enrich bibliography metadata:
 python3 scripts/verify_references.py references.json --out-json verification.json --out-enriched-json references_clean.json
 ```
 
-The enriched JSON includes normalized title, authors, year, venue/container title, DOI, URL, type, verification status, and match score for verified items. Unverified items retain the input metadata plus warning fields; do not treat them as confirmed sources.
+The enriched JSON includes normalized title, authors, year, venue/container title, DOI, URL, type, verification status, composite match score, and field-level scores for verified items. `candidate_match`, `metadata_mismatch`, `needs_manual_review`, and `verification_error` records retain the input metadata plus warnings; do not treat them as confirmed sources.
 
 ## Reference List Entries
 
@@ -143,6 +156,6 @@ Before final delivery:
 - Every cited claim has a matching ledger entry or clear source note.
 - Every reference-list item is cited in the text, table, figure, or appendix.
 - No fabricated or partially fabricated reference remains.
-- No citation marker appears as plain正文 when superscript styling is required.
+- No citation marker appears as plain text when superscript styling is required.
 - Tables and figures with source notes have corresponding reference entries.
 - Any unverified source is explicitly flagged instead of silently included.

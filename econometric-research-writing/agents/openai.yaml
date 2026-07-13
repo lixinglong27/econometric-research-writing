@@ -1,6 +1,4 @@
 interface:
   display_name: "Econometric Research Writing"
-  short_description: "Econometric methods, citations, figures, tables, and DOCX output"
-  # Note: The '$' prefix is platform-specific syntax used by some agent runtimes to refer to local skills.
-  default_prompt: "Use $econometric-research-writing to analyze empirical data, choose rigorous econometric methods, verify literature and citations, and produce a polished economics-style Word paper."
-
+  short_description: "Executable Python econometric research workflows"
+  default_prompt: "Use $econometric-research-writing to design, execute, validate, and write a reproducible Python econometric analysis."
