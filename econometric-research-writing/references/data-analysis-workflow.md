@@ -2,6 +2,8 @@
 
 Use this long-term reference when the user provides a dataset, variable list, codebook, result table, or asks for data analysis before writing an economics/management empirical paper. This reference adapts common high-quality data-analysis skill patterns--automatic profiling, quality checks, visualization, structured reports, and verification loops--to professional econometric research, where variables have economic meaning and causal roles.
 
+When the user requests grilling or a mock defense, read `research-grilling.md` first. Treat profiling and focused diagnostics as temporary evidence gathering until the user explicitly authorizes implementation; do not start the formal analysis runner during the grilling phase.
+
 ## Table Of Contents
 
 - What Generic Data Analysis Skills Do Well

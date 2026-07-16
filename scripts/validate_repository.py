@@ -45,6 +45,7 @@ def check_required_layout():
         SKILL_DIR / "agents" / "openai.yaml",
         SKILL_DIR / "assets" / "econ-paper-template.docx",
         SKILL_DIR / "references" / "method-selection.md",
+        SKILL_DIR / "references" / "research-grilling.md",
         SKILL_DIR / "references" / "time-series-methods.md",
         SKILL_DIR / "references" / "panel-methods.md",
         SKILL_DIR / "references" / "iv-causal-methods.md",
@@ -105,6 +106,27 @@ def check_skill_metadata():
     for token in ["interface:", "display_name:", "short_description:", "default_prompt:"]:
         if token not in agent_yaml:
             fail(f"agents/openai.yaml missing {token}")
+
+
+def check_research_grilling_contract():
+    skill_text = read_text(SKILL_DIR / "SKILL.md")
+    grilling = read_text(SKILL_DIR / "references" / "research-grilling.md")
+    required_skill_tokens = ["research-grilling.md", "implementation gate", "grilled"]
+    required_reference_tokens = [
+        "Attach an agent-recommended answer to every question.",
+        "Ask two or three questions together only when",
+        "Topic-Knowledge Calibration",
+        "Evidence-First Data Grilling",
+        "Do not create a grill-specific memory",
+        "Do not produce a consensus recap",
+        "explicitly confirms that implementation may begin",
+    ]
+    for token in required_skill_tokens:
+        if token not in skill_text:
+            fail(f"SKILL.md missing research-grilling contract token: {token}")
+    for token in required_reference_tokens:
+        if token not in grilling:
+            fail(f"research-grilling.md missing contract token: {token}")
 
 
 def check_no_forbidden_text():
@@ -268,6 +290,7 @@ def main():
 
     check_required_layout()
     check_skill_metadata()
+    check_research_grilling_contract()
     check_no_forbidden_text()
     check_docx_template()
     check_python_compile()

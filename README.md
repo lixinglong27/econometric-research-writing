@@ -7,6 +7,7 @@ Reusable `SKILL.md`-based agent skill for econometric analysis, economics/manage
 An end-to-end skill for professional economics and management empirical research. It supports:
 
 - Econometric dataset profiling and model-readiness checks.
+- Evidence-first research grilling with one or more dependency-aware questions, recommended answers, knowledge-adaptive explanations, and an explicit implementation gate.
 - Agent-decided variable roles based on data values, names, timing, codebook evidence, and the research question, with economic meaning checks, mechanism-path mapping, and causal-language boundaries.
 - Method selection for panel, time-series, causal inference, RDD, matching, IPW, staggered DiD, GARCH, Markov-switching, panel VAR, and spatial panel designs.
 - Literature search, citation provenance, and reference-integrity workflows with a strict no-fabrication rule.

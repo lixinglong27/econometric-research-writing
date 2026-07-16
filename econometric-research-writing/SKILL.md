@@ -1,6 +1,6 @@
 ---
 name: econometric-research-writing
-description: End-to-end econometric analysis and economics/management paper-writing workflow. Use for dataset profiling, model selection (panels, IV, GMM, DiD, time-series, volatility, regimes), literature/citation verification, academic prose polishing, and generating publication-style Word DOCX reports with native OMML equations and three-line tables.
+description: End-to-end econometric analysis and economics/management paper-writing workflow. Use for data-grounded research grilling or mock defense, stress-testing research designs and identification strategies, dataset profiling, model selection (panels, IV, GMM, DiD, time-series, volatility, regimes), literature/citation verification, academic prose polishing, and publication-style Word DOCX reports with native OMML equations and three-line tables. Trigger when users ask to be grilled, questioned, challenged, or walked through one or more evidence-backed research decisions before implementation.
 ---
 
 # Econometric Research Writing
@@ -12,19 +12,22 @@ Use this skill to turn a research question, dataset, assignment, draft, result t
 ## Routing
 
 1. For topic, identification, model choice, or method fit, read `references/method-selection.md`.
-2. For single-series, multivariate time-series, nonstationarity, VAR, threshold, kernel, GARCH/ARCH, Markov-switching, or time-varying coefficient methods, read `references/time-series-methods.md`.
-3. For static FE/RE, Mundlak/Hausman, GLS variance components, dynamic panels, heterogeneous slopes, panel trends, binary panels, panel VAR, spatial panels, or time-varying panels, read `references/panel-methods.md`.
-4. For IV, dynamic-panel IV/GMM, panel treatment effects, synthetic counterfactuals, DiD/event-study logic, or causal claim boundaries, read `references/iv-causal-methods.md`.
-5. For RDD, fuzzy RDD, propensity score matching, IPW, doubly robust weighting, PSM-DiD, or IPW-DiD, read `references/rdd-matching-methods.md`.
-6. For dataset intake, variable profiling, agent-decided semantic roles, model-ready checks, executable descriptive statistics, baseline regression, clustered inference, or event-study output, read `references/data-analysis-workflow.md`.
-7. For regression workflow, robustness, tables, or reproducibility, read `references/empirical-workflow.md`.
-8. For table/figure style, regression tables, descriptive tables, event-study figures, coefficient plots, visual QA, or top-journal layout conventions, read `references/tables-figures-style.md`.
-9. For paper search, literature review, source provenance, citation honesty, reference formatting, data/code citations, or Word superscript citations, read `references/literature-citation-workflow.md`.
-10. For abstract, introduction, empirical strategy, results, robustness, conclusion, or style polishing, read `references/econ-writing-style.md`.
-11. For Word output, formulas, rendering, superscript citation markers, or document QA, read `references/docx-workflow.md`.
-12. For deterministic dataset profiling, use `scripts/profile_econ_dataset.py`; after the agent writes and reviews `roles.json`, use `scripts/run_empirical_analysis.py` for descriptive tables, baseline estimates, clustered standard errors, robustness results, design diagnostics, and event-study figures; for reference verification and enriched bibliography metadata, use `scripts/verify_references.py`; for DOCX generation, use `scripts/build_paper_docx.py`; for OMML helpers, use `scripts/omml_math.py`; for structural QA, use `scripts/check_docx_integrity.py`.
+2. For research grilling, mock defense, data-grounded questioning, knowledge-adaptive explanation, or stress-testing a proposed empirical design before implementation, read `references/research-grilling.md`.
+3. For single-series, multivariate time-series, nonstationarity, VAR, threshold, kernel, GARCH/ARCH, Markov-switching, or time-varying coefficient methods, read `references/time-series-methods.md`.
+4. For static FE/RE, Mundlak/Hausman, GLS variance components, dynamic panels, heterogeneous slopes, panel trends, binary panels, panel VAR, spatial panels, or time-varying panels, read `references/panel-methods.md`.
+5. For IV, dynamic-panel IV/GMM, panel treatment effects, synthetic counterfactuals, DiD/event-study logic, or causal claim boundaries, read `references/iv-causal-methods.md`.
+6. For RDD, fuzzy RDD, propensity score matching, IPW, doubly robust weighting, PSM-DiD, or IPW-DiD, read `references/rdd-matching-methods.md`.
+7. For dataset intake, variable profiling, agent-decided semantic roles, model-ready checks, executable descriptive statistics, baseline regression, clustered inference, or event-study output, read `references/data-analysis-workflow.md`.
+8. For regression workflow, robustness, tables, or reproducibility, read `references/empirical-workflow.md`.
+9. For table/figure style, regression tables, descriptive tables, event-study figures, coefficient plots, visual QA, or top-journal layout conventions, read `references/tables-figures-style.md`.
+10. For paper search, literature review, source provenance, citation honesty, reference formatting, data/code citations, or Word superscript citations, read `references/literature-citation-workflow.md`.
+11. For abstract, introduction, empirical strategy, results, robustness, conclusion, or style polishing, read `references/econ-writing-style.md`.
+12. For Word output, formulas, rendering, superscript citation markers, or document QA, read `references/docx-workflow.md`.
+13. For deterministic dataset profiling, use `scripts/profile_econ_dataset.py`; after the agent writes and reviews `roles.json`, use `scripts/run_empirical_analysis.py` for descriptive tables, baseline estimates, clustered standard errors, robustness results, design diagnostics, and event-study figures; for reference verification and enriched bibliography metadata, use `scripts/verify_references.py`; for DOCX generation, use `scripts/build_paper_docx.py`; for OMML helpers, use `scripts/omml_math.py`; for structural QA, use `scripts/check_docx_integrity.py`.
 
 ## Default Workflow
+
+When research grilling is active, use read-only evidence gathering and the questioning protocol in `references/research-grilling.md`. Suspend formal estimation, manuscript edits, final artifact generation, and repository changes until the user explicitly opens the implementation gate.
 
 1. Clarify the research claim: outcome, treatment/regressor, unit, time, sample, and target interpretation.
 2. Audit the data structure: cross-section, time series, panel, balanced/unbalanced panel, binary outcome, nonstationary series, or high-dimensional nonlinear setting.
@@ -72,6 +75,7 @@ Before final delivery:
 ## References And Assets
 
 - `references/method-selection.md`: choose models from research question and data structure.
+- `references/research-grilling.md`: evidence-first, knowledge-adaptive questioning and the pre-implementation confirmation gate.
 - `references/time-series-methods.md`: AR, unit-root, threshold, kernel, cointegration, Granger, VAR, TV-VAR, and nonlinear time-series methods.
 - `references/panel-methods.md`: FE/RE, balanced/unbalanced panels, heterogeneous slopes, dynamic panels, panel nonstationarity, binary panels, and time-varying panels.
 - `references/iv-causal-methods.md`: IV/2SLS, dynamic-panel IV, DiD/event studies, and causal claim boundaries.
