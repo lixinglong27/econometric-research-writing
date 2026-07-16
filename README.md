@@ -7,7 +7,7 @@ Reusable `SKILL.md`-based agent skill for econometric analysis, economics/manage
 An end-to-end skill for professional economics and management empirical research. It supports:
 
 - Econometric dataset profiling and model-readiness checks.
-- Variable role inference, economic meaning checks, mechanism-path mapping, and causal-language boundaries.
+- Agent-decided variable roles based on data values, names, timing, codebook evidence, and the research question, with economic meaning checks, mechanism-path mapping, and causal-language boundaries.
 - Method selection for panel, time-series, causal inference, RDD, matching, IPW, staggered DiD, GARCH, Markov-switching, panel VAR, and spatial panel designs.
 - Literature search, citation provenance, and reference-integrity workflows with a strict no-fabrication rule.
 - Economics/management paper drafting, empirical-strategy writing, results interpretation, robustness framing, and polished academic prose.
@@ -56,6 +56,7 @@ Example commands from the repository root:
 
 ```bash
 python3 econometric-research-writing/scripts/profile_econ_dataset.py data.csv --out profile.md --json-out profile.json
+python3 econometric-research-writing/scripts/run_empirical_analysis.py data.csv --roles-json roles.json --output-dir results
 python3 econometric-research-writing/scripts/build_paper_docx.py paper.json paper.docx --template econometric-research-writing/assets/econ-paper-template.docx
 python3 econometric-research-writing/scripts/check_docx_integrity.py paper.docx
 python3 econometric-research-writing/scripts/verify_references.py references.json --out-json verification.json --out-enriched-json references_clean.json

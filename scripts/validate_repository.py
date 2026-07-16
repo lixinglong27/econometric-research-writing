@@ -59,6 +59,7 @@ def check_required_layout():
         SKILL_DIR / "scripts" / "check_docx_integrity.py",
         SKILL_DIR / "scripts" / "omml_math.py",
         SKILL_DIR / "scripts" / "profile_econ_dataset.py",
+        SKILL_DIR / "scripts" / "run_empirical_analysis.py",
         SKILL_DIR / "scripts" / "render_validate_docx.py",
         SKILL_DIR / "scripts" / "verify_references.py",
         SKILL_DIR / "tests" / "test_regressions.py",
@@ -152,6 +153,11 @@ def run_full_smoke_tests():
             encoding="utf-8",
         )
         profile_json = tmpdir / "profile.json"
+        roles_json = tmpdir / "roles.json"
+        roles_json.write_text(
+            json.dumps({"unit": "firm_id", "time": "year", "outcome": "revenue", "treatment": "subsidy"}),
+            encoding="utf-8",
+        )
         run_command(
             [
                 sys.executable,
@@ -161,15 +167,17 @@ def run_full_smoke_tests():
                 str(tmpdir / "profile.md"),
                 "--json-out",
                 str(profile_json),
+                "--roles-json",
+                str(roles_json),
             ]
         )
         profile = json.loads(profile_json.read_text(encoding="utf-8"))
         if profile["analysis_roles"].get("unit") != "firm_id":
-            fail("profile smoke test did not infer firm_id as unit")
+            fail("profile smoke test did not preserve the agent-decided unit")
         if profile["analysis_roles"].get("time") != "year":
-            fail("profile smoke test did not infer year as time")
-        if "unit" in profile["inferred_role_hints"].get("dividends", []):
-            fail("profile smoke test misclassified dividends as a unit")
+            fail("profile smoke test did not preserve the agent-decided time key")
+        if profile["agent_role_decision_required"]:
+            fail("profile smoke test ignored the supplied agent role decision")
 
         paper_json = tmpdir / "paper.json"
         out_docx = tmpdir / "paper.docx"

@@ -1,36 +1,13 @@
 import argparse
 import json
-import re
+import warnings as python_warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-
-ROLE_HINTS = {
-    "unit": ["id", "firm", "company", "country", "region", "province", "city", "person", "household", "bank"],
-    "time": ["date", "year", "month", "quarter", "time", "period", "week", "day"],
-    "outcome": ["outcome", "performance", "growth", "revenue", "profit", "sales", "productivity", "return", "score"],
-    "treatment": ["treat", "policy", "post", "did", "exposure", "shock", "price", "tax", "subsidy", "intervention"],
-    "mechanism": ["mechanism", "channel", "mediator", "innovation", "investment", "employment", "cost", "attention"],
-    "instrument": ["instrument", "iv", "distance", "eligibility", "shift", "bartik", "z_"],
-    "weight": ["weight", "population", "sample_weight"],
-}
-
-
-def name_tokens(name):
-    return re.findall(r"[a-z0-9]+", str(name).lower())
-
-
-def hint_matches(name, hint):
-    tokens = name_tokens(name)
-    hint_tokens = name_tokens(hint)
-    if not hint_tokens:
-        return False
-    if len(hint_tokens) == 1:
-        return hint_tokens[0] in tokens
-    width = len(hint_tokens)
-    return any(tokens[i : i + width] == hint_tokens for i in range(0, len(tokens) - width + 1))
+LIST_ROLES = {"main_regressors", "controls", "mechanisms", "moderators", "instruments", "fixed_effects", "descriptive_variables"}
 
 
 def read_data(path, sheet=None):
@@ -54,37 +31,6 @@ def safe_float(value):
     if isinstance(value, (np.floating, float)):
         return float(value)
     return value
-
-
-def infer_roles(columns):
-    inferred = {}
-    for col in columns:
-        hits = []
-        for role, hints in ROLE_HINTS.items():
-            if any(hint_matches(col, h) for h in hints):
-                hits.append(role)
-        if hits:
-            inferred[col] = hits
-    return inferred
-
-
-def first_inferred_role(inferred, role, columns):
-    for col in columns:
-        if role in inferred.get(col, []):
-            return col
-    return None
-
-
-def roles_with_inferred_panel_keys(roles, inferred, columns):
-    merged = dict(roles)
-    sources = {k: "declared" for k in merged}
-    for role in ["unit", "time", "treatment", "outcome", "mechanism", "instrument", "weight"]:
-        if role not in merged:
-            value = first_inferred_role(inferred, role, columns)
-            if value is not None:
-                merged[role] = value
-                sources[role] = "inferred"
-    return merged, sources
 
 
 def column_profile(df):
@@ -119,8 +65,21 @@ def column_profile(df):
     return rows
 
 
-def top_correlations(df, max_pairs=20):
-    num = df.select_dtypes(include=[np.number]).replace([np.inf, -np.inf], np.nan)
+def as_list(value):
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+def declared_regressors(roles):
+    values = [*as_list(roles.get("treatment")), *as_list(roles.get("main_regressors"))]
+    values.extend(as_list(roles.get("controls")))
+    return list(dict.fromkeys(str(value) for value in values if value))
+
+
+def top_correlations(df, columns, max_pairs=20):
+    selected = [column for column in columns if column in df.columns]
+    num = df[selected].select_dtypes(include=[np.number]).replace([np.inf, -np.inf], np.nan)
     if num.shape[1] < 2:
         return []
     corr = num.corr(numeric_only=True)
@@ -133,6 +92,99 @@ def top_correlations(df, max_pairs=20):
                 pairs.append({"var1": str(a), "var2": str(b), "corr": float(val), "abs_corr": abs(float(val))})
     pairs.sort(key=lambda x: x["abs_corr"], reverse=True)
     return [{k: v for k, v in p.items() if k != "abs_corr"} for p in pairs[:max_pairs]]
+
+
+def collinearity_diagnostics(df, roles):
+    """Diagnose only agent-declared regressors, never IDs, time keys, or fixed effects."""
+    excluded = {
+        *as_list(roles.get("unit")),
+        *as_list(roles.get("time")),
+        *as_list(roles.get("cluster")),
+        *as_list(roles.get("fixed_effects")),
+    }
+    requested = [column for column in declared_regressors(roles) if column not in excluded]
+    missing = [column for column in requested if column not in df.columns]
+    selected = [column for column in requested if column in df.columns]
+    if not selected:
+        return {
+            "variables": [],
+            "excluded_structural_variables": sorted(excluded),
+            "status": "not_run",
+            "reason": "Agent-declared treatment/main_regressors and controls are required.",
+        }
+
+    raw = df[selected].replace([np.inf, -np.inf], np.nan)
+    design = pd.get_dummies(raw, columns=list(raw.select_dtypes(exclude=[np.number]).columns), drop_first=True, dtype=float)
+    design = design.apply(pd.to_numeric, errors="coerce").dropna()
+    varying = [column for column in design if design[column].nunique(dropna=True) > 1]
+    design = design[varying]
+    if design.empty:
+        return {
+            "variables": selected,
+            "missing_variables": missing,
+            "excluded_structural_variables": sorted(excluded),
+            "status": "not_run",
+            "reason": "No complete, varying regressor columns remain after encoding.",
+        }
+
+    standardized = (design - design.mean()) / design.std(ddof=0)
+    standardized = standardized.replace([np.inf, -np.inf], np.nan).dropna(axis=1)
+    matrix = standardized.to_numpy(dtype=float)
+    rank = int(np.linalg.matrix_rank(matrix))
+    condition_number = float(np.linalg.cond(matrix)) if matrix.size else None
+    if len(design) > 3:
+        # Require the lower edge of an approximate Fisher-z confidence interval
+        # to clear a practically strong |rho| floor of 0.70.
+        threshold = float(
+            min(0.95, np.tanh(np.arctanh(0.70) + 1.96 / np.sqrt(len(design) - 3)))
+        )
+    else:
+        threshold = 0.95
+    correlations = top_correlations(design, list(design.columns))
+    flagged = [pair for pair in correlations if abs(pair["corr"]) >= threshold]
+
+    vif_rows = []
+    if design.shape[1] >= 2:
+        values = np.column_stack([np.ones(len(design)), design.to_numpy(dtype=float)])
+        for index, column in enumerate(design.columns):
+            with python_warnings.catch_warnings():
+                python_warnings.simplefilter("ignore", RuntimeWarning)
+                try:
+                    vif = float(variance_inflation_factor(values, index + 1))
+                except (ValueError, np.linalg.LinAlgError):
+                    vif = float("inf")
+            vif_rows.append({"variable": str(column), "vif": None if not np.isfinite(vif) else vif})
+
+    warnings_out = []
+    if flagged:
+        warnings_out.append(
+            f"{len(flagged)} regressor pair(s) exceed the sample-adaptive absolute-correlation threshold {threshold:.3f}."
+        )
+    high_vif = [row["variable"] for row in vif_rows if row["vif"] is None or row["vif"] >= 10]
+    if high_vif:
+        warnings_out.append(f"VIF is at least 10 or infinite for: {', '.join(high_vif)}.")
+    if rank < design.shape[1]:
+        warnings_out.append("The encoded regressor design matrix is rank deficient.")
+    if condition_number is not None and condition_number >= 30:
+        warnings_out.append(f"The standardized design-matrix condition number is high ({condition_number:.2f}).")
+
+    return {
+        "status": "ok",
+        "variables": selected,
+        "encoded_columns": [str(column) for column in design.columns],
+        "missing_variables": missing,
+        "excluded_structural_variables": sorted(excluded),
+        "complete_observations": int(len(design)),
+        "adaptive_correlation_threshold": threshold,
+        "correlation_threshold_method": "95% Fisher-z lower bound above practical |rho| floor 0.70",
+        "top_correlations": correlations,
+        "flagged_correlations": flagged,
+        "vif": vif_rows,
+        "design_matrix_rank": rank,
+        "design_matrix_columns": int(design.shape[1]),
+        "condition_number_standardized": condition_number,
+        "warnings": warnings_out,
+    }
 
 
 def panel_checks(df, roles):
@@ -160,10 +212,16 @@ def load_roles(path):
     if not path:
         return {}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    return {k: v for k, v in data.items() if v}
+    if not isinstance(data, dict):
+        raise ValueError("roles JSON must be an object generated or reviewed by the agent.")
+    roles = {k: v for k, v in data.items() if v is not None and v != []}
+    for key in LIST_ROLES:
+        if key in roles:
+            roles[key] = as_list(roles[key])
+    return roles
 
 
-def warnings(df, profiles, roles):
+def warnings(df, profiles, roles, diagnostics):
     out = []
     for p in profiles:
         col_name = p["name"]
@@ -185,19 +243,7 @@ def warnings(df, profiles, roles):
                 except Exception:
                     pass
 
-    # Check for multicollinearity (correlation > 0.8) among numeric variables
-    num_cols = df.select_dtypes(include=[np.number]).columns
-    if len(num_cols) >= 2:
-        try:
-            corr_matrix = df[num_cols].corr().abs()
-            cols_list = list(num_cols)
-            for i, col1 in enumerate(cols_list):
-                for col2 in cols_list[i+1:]:
-                    r_val = corr_matrix.loc[col1, col2]
-                    if pd.notna(r_val) and r_val > 0.8:
-                        out.append(f"High correlation between `{col1}` and `{col2}` (r = {r_val:.2f}); potential multicollinearity risk if both are used as regressors.")
-        except Exception:
-            pass
+    out.extend(diagnostics.get("warnings", []))
 
     unit = roles.get("unit")
     time = roles.get("time")
@@ -207,22 +253,22 @@ def warnings(df, profiles, roles):
 
 
 def build_report(path, df, roles):
-    inferred = infer_roles(df.columns)
-    analysis_roles, role_sources = roles_with_inferred_panel_keys(roles, inferred, list(df.columns))
     profiles = column_profile(df)
-    panel = panel_checks(df, analysis_roles)
+    diagnostics = collinearity_diagnostics(df, roles)
+    panel = panel_checks(df, roles)
     report = {
         "file": str(path),
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
         "roles": roles,
-        "analysis_roles": {str(k): str(v) for k, v in analysis_roles.items()},
-        "role_sources": role_sources,
-        "inferred_role_hints": {str(k): v for k, v in inferred.items()},
+        "analysis_roles": roles,
+        "agent_role_decision_required": not bool(roles),
+        "role_decision_policy": "An agent must assign semantic roles from the research question, variable names, values, units, timing, and codebook evidence; the profiler does not assign them by keyword.",
         "columns_profile": profiles,
-        "top_correlations": top_correlations(df),
+        "top_correlations": diagnostics.get("top_correlations", []),
+        "collinearity_diagnostics": diagnostics,
         "panel_checks": panel,
-        "warnings": warnings(df, profiles, analysis_roles),
+        "warnings": warnings(df, profiles, roles, diagnostics),
     }
     return report
 
@@ -235,23 +281,13 @@ def markdown_report(report):
         f"- Rows: {report['rows']}",
         f"- Columns: {report['columns']}",
         "",
-        "## Declared Roles",
+        "## Agent-Decided Roles",
     ]
     if report["roles"]:
         for k, v in report["roles"].items():
             lines.append(f"- {k}: `{v}`")
     else:
-        lines.append("- None supplied. Treat role hints below as provisional.")
-    if report["analysis_roles"]:
-        lines += ["", "## Analysis Roles Used For Automatic Checks"]
-        for k, v in report["analysis_roles"].items():
-            source = report["role_sources"].get(k, "unknown")
-            lines.append(f"- {k}: `{v}` ({source})")
-    lines += ["", "## Inferred Role Hints"]
-    for col, hints in report["inferred_role_hints"].items():
-        lines.append(f"- `{col}`: {', '.join(hints)}")
-    if not report["inferred_role_hints"]:
-        lines.append("- No obvious role hints from column names.")
+        lines.append("- None supplied. The agent must inspect the column profile, variable names, observed values, research question, and any codebook before creating `roles.json`.")
     lines += ["", "## Data Quality Warnings"]
     for w in report["warnings"] or ["No automatic warnings. Still check economics-specific measurement issues."]:
         lines.append(f"- {w}")
@@ -273,7 +309,7 @@ def markdown_report(report):
     if treatment and outcome:
         lines += [
             "",
-            "## Inferred Causal Pathway Map",
+            "## Agent-Decided Causal Pathway Map",
             "",
             "```mermaid",
             "graph LR",
@@ -312,6 +348,21 @@ def markdown_report(report):
             lines.append("- Not enough numeric columns.")
         else:
             lines.append(f"- `{pair['var1']}` vs `{pair['var2']}`: {pair['corr']:.3f}")
+    diagnostics = report["collinearity_diagnostics"]
+    lines += ["", "## Regressor Design Diagnostics", f"- Status: {diagnostics['status']}"]
+    if diagnostics["status"] == "ok":
+        lines += [
+            f"- Regressors checked: {', '.join(diagnostics['variables'])}",
+            f"- Structural variables excluded: {', '.join(diagnostics['excluded_structural_variables']) or 'none'}",
+            f"- Sample-adaptive correlation threshold: {diagnostics['adaptive_correlation_threshold']:.3f}",
+            f"- Design rank: {diagnostics['design_matrix_rank']} / {diagnostics['design_matrix_columns']}",
+            f"- Standardized condition number: {diagnostics['condition_number_standardized']:.3f}",
+        ]
+        for row in diagnostics["vif"]:
+            value = "infinite" if row["vif"] is None else f"{row['vif']:.3f}"
+            lines.append(f"- VIF `{row['variable']}`: {value}")
+    else:
+        lines.append(f"- Reason: {diagnostics['reason']}")
     lines += [
         "",
         "## Econometric Next Step",
@@ -326,7 +377,7 @@ def main():
     parser = argparse.ArgumentParser(description="Profile a CSV/XLSX/DTA dataset for econometric research planning.")
     parser.add_argument("data_file")
     parser.add_argument("--sheet")
-    parser.add_argument("--roles-json", help="JSON such as {'unit':'firm_id','time':'year','outcome':'y','treatment':'policy'}.")
+    parser.add_argument("--roles-json", help="Agent-reviewed semantic roles JSON; roles are never assigned from column-name keywords.")
     parser.add_argument("--out", required=True, help="Markdown report path.")
     parser.add_argument("--json-out", help="Optional JSON report path.")
     args = parser.parse_args()

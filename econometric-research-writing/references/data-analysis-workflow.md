@@ -53,7 +53,7 @@ Default rule: data analysis should produce a model-ready research map, not just 
 Rather than hardcoding specific database clients or APIs (like World Bank, FRED, or AkShare) into the writing skill, leverage the Model Context Protocol (MCP) or external fetching scripts as an abstract retrieval interface:
 
 - **Data Acquisition Boundary**: Use available data-fetching MCP tools or write temporary Python scripts to download macroeconomic, financial, or micro-level variables, saving them into a standard CSV, XLSX, or DTA dataset in the local workspace.
-- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` for deterministic structure and quality profiling: column summaries, missingness, provisional role hints, panel candidate checks, high-correlation warnings, and log-transformation suggestions. The profiler does **not** run unit-root or stationarity tests; run those separately after confirming frequency, deterministic terms, lag structure, and relevant variables.
+- **Profiling Decoupling**: Once the data file is generated, pass it to `scripts/profile_econ_dataset.py` for deterministic structure and quality profiling: column summaries, missingness, panel checks for explicitly assigned keys, regressor diagnostics, and transformation warnings. The profiler does not assign semantic roles from column-name keywords. The agent must inspect names and observed values together with the research question and any codebook, record its decisions in `roles.json`, and rerun the profile with that file. The profiler does **not** run unit-root or stationarity tests; run those separately after confirming frequency, deterministic terms, lag structure, and relevant variables.
 
 ## Intake And Variable Semantics
 
@@ -67,7 +67,24 @@ Before modeling, build a variable dictionary with:
 - Economic role: outcome, main regressor, control, mechanism, moderator, instrument, fixed effect, clustering unit, weight, or sample flag.
 - Measurement risk: survey error, accounting definition change, currency/inflation issue, coding change, top-coding, censoring, selection.
 
-If names are ambiguous, ask targeted questions or infer cautiously and label the inference as provisional.
+The agent decides roles from the joint evidence in variable names, observed values and distributions, units, timing, research design, and any codebook. It must record the decision in a reviewed `roles.json`; deterministic scripts must not silently convert name hints into outcome, treatment, control, unit, or time roles. If the evidence is ambiguous, ask targeted questions or label the agent decision as provisional.
+
+A standard executable role specification can include:
+
+```json
+{
+  "outcome": "revenue",
+  "treatment": "subsidy",
+  "controls": ["assets", "employment"],
+  "unit": "firm_id",
+  "time": "year",
+  "fixed_effects": ["firm_id", "year"],
+  "cluster": "firm_id",
+  "event_time": "event_time",
+  "event_reference": -1,
+  "event_window": [-4, 4]
+}
+```
 
 ## Data Structure Audit
 
@@ -155,6 +172,16 @@ Minimum descriptive outputs:
 - Time trend plot for outcome, treatment, and key covariates when time exists.
 - Within/between variation summary for panel regressors.
 - Missingness and sample selection summary by treatment/time/unit group.
+
+After the agent reviews `roles.json`, run:
+
+```bash
+python3 scripts/run_empirical_analysis.py data.csv --roles-json roles.json --output-dir results
+```
+
+The deterministic runner produces focused descriptive-statistics tables, a baseline OLS/fixed-effect design with clustered standard errors when a cluster role exists (HC3 otherwise), a progression of robustness specifications, and an event-study coefficient table plus PNG/PDF figure when `event_time` is defined. These are statistical outputs, not automatic causal identification; the agent must still justify the design and interpret estimates within its assumptions.
+
+Multicollinearity diagnostics must be based on agent-declared treatment/main regressors and controls. Exclude unit IDs, time keys, clustering variables, and absorbed fixed effects. Report top correlations with a sample-adaptive threshold, VIF, standardized design-matrix condition number, and rank deficiency rather than relying on a fixed pairwise-correlation cutoff.
 
 Diagnostics by data type:
 

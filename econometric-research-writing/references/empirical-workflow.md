@@ -18,6 +18,8 @@ Use this reference to run or plan an econometric analysis from model-ready data 
 12. Produce final tables/figures with self-contained notes, source notes, and text callouts.
 13. Write interpretation with limitations and citation-backed claims.
 
+For standard linear and event-study work after the agent has reviewed semantic roles, `scripts/run_empirical_analysis.py` implements steps 5 and 8-10 as reproducible CSV/Markdown tables and PNG/PDF figures. Its default robustness progression separates minimal, controlled, preferred fixed-effect, and alternative-inference specifications; replace or extend these only when the added specification targets a stated threat.
+
 ## Reproducibility Contract
 
 - Keep raw data read-only.
@@ -92,4 +94,3 @@ For mechanism variables, state whether the estimate is a separate mechanism test
 - [Data Analysis Workflow](data-analysis-workflow.md)
 - [Method Selection](method-selection.md)
 - [Tables and Figures Style](tables-figures-style.md)
-

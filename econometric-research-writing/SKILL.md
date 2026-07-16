@@ -16,22 +16,22 @@ Use this skill to turn a research question, dataset, assignment, draft, result t
 3. For static FE/RE, Mundlak/Hausman, GLS variance components, dynamic panels, heterogeneous slopes, panel trends, binary panels, panel VAR, spatial panels, or time-varying panels, read `references/panel-methods.md`.
 4. For IV, dynamic-panel IV/GMM, panel treatment effects, synthetic counterfactuals, DiD/event-study logic, or causal claim boundaries, read `references/iv-causal-methods.md`.
 5. For RDD, fuzzy RDD, propensity score matching, IPW, doubly robust weighting, PSM-DiD, or IPW-DiD, read `references/rdd-matching-methods.md`.
-6. For dataset intake, variable profiling, data quality, semantic roles, mechanism paths, model-ready checks, or EDA before econometric modeling, read `references/data-analysis-workflow.md`.
+6. For dataset intake, variable profiling, agent-decided semantic roles, model-ready checks, executable descriptive statistics, baseline regression, clustered inference, or event-study output, read `references/data-analysis-workflow.md`.
 7. For regression workflow, robustness, tables, or reproducibility, read `references/empirical-workflow.md`.
 8. For table/figure style, regression tables, descriptive tables, event-study figures, coefficient plots, visual QA, or top-journal layout conventions, read `references/tables-figures-style.md`.
 9. For paper search, literature review, source provenance, citation honesty, reference formatting, data/code citations, or Word superscript citations, read `references/literature-citation-workflow.md`.
 10. For abstract, introduction, empirical strategy, results, robustness, conclusion, or style polishing, read `references/econ-writing-style.md`.
 11. For Word output, formulas, rendering, superscript citation markers, or document QA, read `references/docx-workflow.md`.
-12. For deterministic dataset profiling, use `scripts/profile_econ_dataset.py`; for reference verification and enriched bibliography metadata, use `scripts/verify_references.py`; for DOCX generation, use `scripts/build_paper_docx.py`; for OMML helpers, use `scripts/omml_math.py`; for structural QA, use `scripts/check_docx_integrity.py`.
+12. For deterministic dataset profiling, use `scripts/profile_econ_dataset.py`; after the agent writes and reviews `roles.json`, use `scripts/run_empirical_analysis.py` for descriptive tables, baseline estimates, clustered standard errors, robustness results, design diagnostics, and event-study figures; for reference verification and enriched bibliography metadata, use `scripts/verify_references.py`; for DOCX generation, use `scripts/build_paper_docx.py`; for OMML helpers, use `scripts/omml_math.py`; for structural QA, use `scripts/check_docx_integrity.py`.
 
 ## Default Workflow
 
 1. Clarify the research claim: outcome, treatment/regressor, unit, time, sample, and target interpretation.
 2. Audit the data structure: cross-section, time series, panel, balanced/unbalanced panel, binary outcome, nonstationary series, or high-dimensional nonlinear setting.
-3. Build a variable dictionary and causal/mechanism map before interpreting correlations: outcome, treatment/main regressor, controls, mechanisms, moderators, instruments, fixed effects, clustering unit, and bad controls.
+3. Inspect both variable names and observed data, then use the research question and any codebook to build a variable dictionary and causal/mechanism map: outcome, treatment/main regressor, controls, mechanisms, moderators, instruments, fixed effects, clustering unit, and bad controls. The agent must make and record these semantic decisions; never promote deterministic column-name hints into analysis roles.
 4. Choose one primary econometric family and one optional supporting robustness family. Do not mix methods without a clear identification or modeling reason.
 5. Define the baseline equation, assumptions, estimator, diagnostics, and threat model.
-6. Run or request method-matched checks: data quality, missingness, identifying variation, stationarity, lag order, FE/RE logic, IV validity, bandwidth sensitivity, residual diagnostics, placebo/falsification, or robustness by specification.
+6. For a standard linear or event-study specification, write the reviewed roles to JSON and run `scripts/run_empirical_analysis.py` to generate focused descriptive statistics, baseline estimates, clustered or heteroskedasticity-robust inference, robustness specifications, VIF/rank/condition-number diagnostics, and event-study outputs when event time is defined. Then run or request any additional method-matched checks.
 7. If external literature is used, build a claim-to-source ledger, verify paper metadata, and never include fabricated or unsupported citations.
 8. Write the paper in economics/management style: claim first, method bounded by assumptions, results tied to tables/figures, limitations explicit.
 9. Format empirical tables and figures in top-journal style: three-line tables by default, self-contained notes, source notes, readable figures, and text callouts explaining what to look for.
